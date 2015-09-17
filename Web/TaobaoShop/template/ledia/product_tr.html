@@ -1,0 +1,13 @@
+<tr>
+    <th>{{ index }}</th>
+    <td><a href="http://detail.1688.com/offer/{{product.offer_id}}.html" target="_blank"><img src="/media/img/product/{{ product.offer_id }}.jpg" /></a></td>
+    <td class="editable">{{ product.subject or '' }}</td>
+    <td class="editable">{{ product.code or '' }}</td>
+    <td class="editable">{{ product.brand or ''}}</td>
+    <td class="editable">{{ product.pattern or ''}}</td>
+    <td class="editable">{{ product.fabric or ''}}</td>
+    <td class="editable">{{ product.fabric_content or '' }}</td>
+    <td class="editable">{{ product.fabric_scale or ''}}</td>
+    <td class="editable selectable">{{ product.status or ''}}</td>
+    <td class="editable">{{ product.remarks or ''}}</td>
+</tr>

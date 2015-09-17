@@ -1,0 +1,12 @@
+/.hgignore
+/.hg/
+__pycache__/
+*.swp
+*.tmp
+*.pyc
+*.pyd
+*.sqlite*
+log.txt
+log.html
+cookies/
+*.jpg

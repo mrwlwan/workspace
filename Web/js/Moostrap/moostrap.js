@@ -1,0 +1,3 @@
+var Moostrap = {
+    transitionend: null
+};
