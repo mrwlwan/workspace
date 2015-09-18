@@ -7,13 +7,13 @@ Moostrap.DropDown = new Class({
 
     initialize: function(toggler, options){
         this.toggler = toggler;
-        this.container = this._get_container();
-        this.menu = this._get_menu();
+        this.container = this.get_container();
+        this.menu = this.get_menu();
         this.menu.addEvent('keydown:relay(a)', this._menu_keydown_handler.bind(this))
     },
     
     toElement: function(){
-        return this.toggler;
+        return this.container
     },
 
     _menu_keydown_handler: function(e, targer){
@@ -33,18 +33,13 @@ Moostrap.DropDown = new Class({
         }
     },
 
-    _get_container: function(toggler){
+    get_container: function(toggler){
         toggler = toggler || this.toggler // clear() 须要带参数
-        var selector = toggler.get('data-target');
-        if(!selector){
-            selector = toggler.get('href');
-            selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, ''); // strip for ie7
-        }
-        var container = selector && $$(selector);
-        return container && container.length ? container[0] : toggler.getParent();
+        var container = Moostrap.get_target(toggler)
+        return container || toggler.getParent()
     },
 
-    _get_menu: function(){
+    get_menu: function(){
         return this.container.getElement('.dropdown-menu')
     },
 
@@ -63,7 +58,7 @@ Moostrap.DropDown = new Class({
     clear: function(){
         $$(this.options.backdrop).destroy(); // 手机端
         //$$(this.options.selector).each(function(toggler){
-            //var container = this._get_container(toggler);
+            //var container = this.get_container(toggler);
             //if(!container.hasClass('open')) return;
             //toggler.set('aria-expanded', false);
             //container.removeClass('open');

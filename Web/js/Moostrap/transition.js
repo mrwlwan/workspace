@@ -1,5 +1,5 @@
 // 返回支持的CSS3 transitionend 事件名. 文件 include 在 moostrap.js 之后
-Moostrap.transitionend = function(){
+Moostrap.transition = function(){
     var transitionend_event_names = {
       WebkitTransition : 'webkitTransitionEnd',
       MozTransition    : 'transitionend',
@@ -11,3 +11,9 @@ Moostrap.transitionend = function(){
     }
     return false // explicit for ie8 (  ._.)
 }();
+
+Moostrap.emulate_transition = function(duration, target){
+    (function(){
+        target.fireEvent(Moostrap.transition)
+    }).delay(duration)
+}

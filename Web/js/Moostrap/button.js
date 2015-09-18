@@ -28,7 +28,6 @@ Moostrap.ButtonGroup = new Class({
 
     initialize: function(element, options){
         this.element = element;
-        this.buttons = element.getElements('.btn');
         this.type = this._check_type();
     },
 
@@ -36,19 +35,12 @@ Moostrap.ButtonGroup = new Class({
         return this.element;
     },
 
-    get_button: function(el){
-        var temp = this.buttons.filter(function(item){
-            return item.element==el
-        });
-        return temp.length ? temp[0] : null;
-    },        
-
     _check_type: function(){
         return this.element.getElement('input[type]').get('type').toLowerCase();
     },
 
     clear: function(){
-        this.buttons.each(function(button){
+        this.element.getElements('.btn').each(function(button){
             button.removeClass('active');
         });
     },
