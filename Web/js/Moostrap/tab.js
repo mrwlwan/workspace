@@ -49,29 +49,23 @@ Moostrap.Tab = new Class({
             }
         }.bind(this));
         this.get_togglers().each(function(item){
-            if(item==el){
-                item.set('aria-expanded', true)
-            }else{
-                item.set('aria-expanded', false)
-            }
+            item.set('aria-expanded', item==el)
         })
 
         var content = Moostrap.get_target(el)
         var active_content = content.getSiblings('.tab-pane.active')[0]
+        active_content.removeClass('in')
         if(active_content.hasClass('fade')){
-            var hide_handler = function(e){
+            (function(){
                 active_content.removeClass('active')
-                active_content.removeEventListener(Moostrap.transition, hide_handler)
-            }
-            active_content.addEventListener(Moostrap.transition, hide_handler)
+                content.addClass('active')
+                       .addClass('in')
+            }).delay(this.options.duration)
         }else{
             active_content.removeClass('active')
+            content.addClass('active')
+                   .addClass('in')
         }
-        active_content.removeClass('in');
-        (function(){
-            content.addClass('in')
-                .addClass('active')
-        }).delay(this.options.duration)
     }
 });
 

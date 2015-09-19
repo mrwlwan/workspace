@@ -1,25 +1,22 @@
 Moostrap.DropDown = new Class({
-    Implements: [Options, Events],
+    Extends: Moostrap.Component,
     options: {
-        backdrop: '.dropdown-backdrop', // 手机端
-        selector: '[data-toggle=dropdown]'
+        store_name: 'dropdown',
+        selector: '[data-toggle=dropdown]',
+        backdrop: '.dropdown-backdrop' // 手机端
     },
 
-    initialize: function(toggler, options){
-        this.toggler = toggler;
+    initialize: function(element, options){
+        this.parent(element, options)
         this.container = this.get_container();
         this.menu = this.get_menu();
         this.menu.addEvent('keydown:relay(a)', this._menu_keydown_handler.bind(this))
     },
     
-    toElement: function(){
-        return this.container
-    },
-
     _menu_keydown_handler: function(e, targer){
         if(e.code==27){
             this.clear()
-            this.toggler.focus()
+            this.element.focus()
             return
         }
         if(this.is_active() && (e.code==38 || e.code==40)){ // up or down
@@ -34,8 +31,8 @@ Moostrap.DropDown = new Class({
     },
 
     get_container: function(toggler){
-        toggler = toggler || this.toggler // clear() 须要带参数
-        var container = Moostrap.get_target(toggler)
+        toggler = toggler || this.element // clear() 须要带参数
+        var container = this.get_target(toggler)
         return container || toggler.getParent()
     },
 
@@ -65,29 +62,34 @@ Moostrap.DropDown = new Class({
         //}.bind(this));
         // 下面性能更好点,但存在使用限制
         if(Moostrap.DropDown.active){
-            Moostrap.DropDown.active.toggler.set('aria-expanded', false);
+            Moostrap.DropDown.active.element.set('aria-expanded', false);
             Moostrap.DropDown.active.container.removeClass('open');
             Moostrap.DropDown.active = null
         }
     },
 
     toggle: function(){
-        if(this.toggler.match('.disabled, :disabled')) return
-        var is_active = this.is_active()
-        this.clear()
-        if(!is_active){
+        if(this.element.match('.disabled, :disabled')) return
+        if(this.is_active()){
+            this.fireEvent('hide')
+            this.clear()
+            this.fireEvent('hidden')
+        }else{
+            this.clear()
+            this.fireEvent('show')
             if('ontouchstart' in document.documentElement && !this.container.match('.navbar-nav') && !this.container.getParent('.navbar-nav')){
                 // if mobile we use a backdrop because click events don't delegate
                 var new_el = new Element(document.createElement('div'))
                 new_el.addClass('dropdown-backdrop')
-                    .inject(this.toggler, 'after')
+                    .inject(this.element, 'after')
                     .addEvent('click', this.clear.bind(this))
             }
-            //this.toggler.fireEvent('focus')
-            this.toggler.set('aria-expanded', true)
+            //this.element.fireEvent('focus')
+            this.element.set('aria-expanded', true)
 
             this.container.addClass('open')
             Moostrap.DropDown.active = this
+            this.fireEvent('shown')
         }
         return false
     },
