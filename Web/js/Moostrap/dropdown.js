@@ -1,3 +1,53 @@
+Moostrap.DropDownMenu = new Class({
+    Extends: Moostrap.Component,
+    options: {
+        store_name: 'dropdown_menu',
+        selector: '.dropdown-menu'
+    },
+
+    initialize: function(element, dropdown, options){
+        this.parent(element, options)
+        this.dropdown = dropdown
+        this.element.addEvent('keydown:relay(li)', this._keydown_listener.bind(this))
+    },
+
+    // enabled参数指定返回非.disabled的items
+    get_items: function(enabled){
+        if(enabled){
+            return this.element.getElements('li:not(.disable)').filter(function(item){
+                return item.getElement('a') 
+            })
+        }
+        return this.element.getElements('li')
+    },
+
+    focus: function(index, items){ // items 方便其它内部方法调用
+        items = items || this.get_items(true)
+        if(!items.length) return
+        if(index<0) index = items.length+index
+        items[index].getElement('a').focus()
+    },
+
+    _keydown_listener: function(e, target){
+        target = target
+        if(e.code==27){ // ESC
+            this.dropdown.hide()
+            return
+        }
+        if(this.dropdown.is_active() && (e.code==38 || e.code==40)){ // up or down
+            var items = this.get_items(true)
+            if(!items.length) return
+            var index = items.indexOf(target).max(0)
+            if (e.code == 38 && index > 0)                 index--         // up
+            if (e.code == 40 && index < items.length - 1) index++         // down
+            if (!~index)                                    index = 0
+            //items[index].focus()
+            this.focus(index)
+        }
+    }
+})        
+
+
 Moostrap.DropDown = new Class({
     Extends: Moostrap.Component,
     options: {
@@ -8,36 +58,31 @@ Moostrap.DropDown = new Class({
 
     initialize: function(element, options){
         this.parent(element, options)
-        this.container = this.get_container();
-        this.menu = this.get_menu();
-        this.menu.addEvent('keydown:relay(a)', this._menu_keydown_handler.bind(this))
+        this.container = this._get_container();
+        this.menu = this._get_menu();
     },
     
-    _menu_keydown_handler: function(e, targer){
-        if(e.code==27){
-            this.clear()
-            this.element.focus()
-            return
-        }
-        if(this.is_active() && (e.code==38 || e.code==40)){ // up or down
-            var items = this.menu.getElements('li:not(.disabled) a')
-            if(!items.length) return
-            var index = items.indexOf(e.target).max(0)
-            if (e.code == 38 && index > 0)                 index--         // up
-            if (e.code == 40 && index < items.length - 1) index++         // down
-            if (!~index)                                    index = 0
-            items[index].focus()
-        }
-    },
-
-    get_container: function(toggler){
+    _get_container: function(toggler){
         toggler = toggler || this.element // clear() 须要带参数
         var container = this.get_target(toggler)
         return container || toggler.getParent()
     },
 
-    get_menu: function(){
-        return this.container.getElement('.dropdown-menu')
+    _get_menu: function(){
+        var el = this.container.getElement('.dropdown-menu')
+        return el.retrieve(Moostrap.DropDownMenu.prototype.options.store_name) || new Moostrap.DropDownMenu(el, this)
+    },
+
+    get_previous: function(){ // 搜寻左边的dropdown.
+        var previous = this.container.getPrevious('.dropdown')
+        var other_target = previous && previous.getElement('[data-toggle=dropdown]')
+        return other_target && (other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target))
+    },
+
+    get_next: function(){ // 搜寻右边的dropdown.
+        var next = this.container.getNext('.dropdown')
+        var other_target = next && next.getElement('[data-toggle=dropdown]')
+        return other_target && (other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target))
     },
 
     get_items: function(enable){
@@ -52,89 +97,94 @@ Moostrap.DropDown = new Class({
         return this.container.hasClass('open')
     },
 
-    clear: function(){
+    is_disabled: function(){
+        return this.element.match('.disabled, :disabled')
+    },
+
+    focus: function(){
+        return this.element.focus()
+    },
+
+    hide: function(){
+        if(!this.is_active()) return false
+        this.fireEvent('hide')
         $$(this.options.backdrop).destroy(); // 手机端
-        //$$(this.options.selector).each(function(toggler){
-            //var container = this.get_container(toggler);
-            //if(!container.hasClass('open')) return;
-            //toggler.set('aria-expanded', false);
-            //container.removeClass('open');
-        //}.bind(this));
-        // 下面性能更好点,但存在使用限制
-        if(Moostrap.DropDown.active){
-            Moostrap.DropDown.active.element.set('aria-expanded', false);
-            Moostrap.DropDown.active.container.removeClass('open');
-            Moostrap.DropDown.active = null
+        this.element.set('aria-expanded', false)
+        this.container.removeClass('open')
+        Moostrap.DropDown.active = null
+        this.focus()
+        this.fireEvent('hidden')
+        return true
+    },
+
+    show: function(){
+        if(this.is_active() || this.is_disabled()) return false
+        this.fireEvent('show')
+        Moostrap.DropDown.clear()
+        this.fireEvent('show')
+        if('ontouchstart' in document.documentElement && !this.container.match('.navbar-nav') && !this.container.getParent('.navbar-nav')){
+            // if mobile we use a backdrop because click events don't delegate
+            var new_el = new Element(document.createElement('div'))
+            new_el.addClass('dropdown-backdrop')
+                .inject(this.element, 'after')
+                .addEvent('click', this.clear.bind(this))
         }
+        //this.element.fireEvent('focus')
+        this.element.set('aria-expanded', true)
+        this.container.addClass('open')
+        Moostrap.DropDown.active = this
+        this.focus()
+        this.fireEvent('shown')
+        return true
     },
 
     toggle: function(){
-        if(this.element.match('.disabled, :disabled')) return
-        if(this.is_active()){
-            this.fireEvent('hide')
-            this.clear()
-            this.fireEvent('hidden')
-        }else{
-            this.clear()
-            this.fireEvent('show')
-            if('ontouchstart' in document.documentElement && !this.container.match('.navbar-nav') && !this.container.getParent('.navbar-nav')){
-                // if mobile we use a backdrop because click events don't delegate
-                var new_el = new Element(document.createElement('div'))
-                new_el.addClass('dropdown-backdrop')
-                    .inject(this.element, 'after')
-                    .addEvent('click', this.clear.bind(this))
-            }
-            //this.element.fireEvent('focus')
-            this.element.set('aria-expanded', true)
-
-            this.container.addClass('open')
-            Moostrap.DropDown.active = this
-            this.fireEvent('shown')
-        }
-        return false
-    },
+        var action = this.is_active() ? this.hide() : this.show()
+        this.fireEvent('toggle')
+        return action
+    }
 });
 
 Moostrap.DropDown.active = null
 
+Moostrap.DropDown.clear = function(){
+    if(!Moostrap.DropDown.active) return false
+    var dropdown = Moostrap.DropDown.active
+    dropdown.hide()
+    Moostrap.DropDown.active = null
+    return true
+}
+
 
 window.addEvent('domready', function(){
     $(document).addEvent('click', function(e){
-        //if(/input|textarea/i.test(e.target.tagName) && e.target.getParent('.dropdown')) return
-        //Moostrap.DropDown.prototype.clear()
-        // 下面的性能好, 但有使用限制, 尤其与其它库一起使用可能会出问题,留意!
         if(!Moostrap.DropDown.active || /input|textarea/i.test(e.target.tagName) && e.target.getParent('.dropdown')) return
-        Moostrap.DropDown.active.clear()
-        
+        Moostrap.DropDown.clear()        
     })
     $(document.body).addEvent('click:relay([data-toggle=dropdown])', function(e, target){
         e.stop()
-        var dropdown = target.retrieve('dropdown')
-        if(!dropdown){
-            dropdown = new Moostrap.DropDown(target);
-            target.store('dropdown', dropdown)
-        }
+        var dropdown = target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(target)
         dropdown.toggle()
     }).addEvent('keydown:relay([data-toggle=dropdown])', function(e, target){
-        if(!/(38|40|27|32)/.test(e.code) || /input|textarea/i.test(e.target.tagName)) return
+        if(!/(37|38|39|40|27|32|13)/.test(e.code) || /input|textarea/i.test(e.target.tagName)) return
         e.stop()
-        var dropdown = target.retrieve('dropdown')
-        if(!dropdown){
-            dropdown = new Moostrap.DropDown(target);
-            target.store('dropdown', dropdown)
-        }
+        var dropdown = target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(target)
+        if(e.code==37) dropdown = dropdown.get_previous()
+        if(e.code==39) dropdown = dropdown.get_next()
+        if(!dropdown) return
         if(dropdown.is_active()){
-            var items = dropdown.menu.getElements('li:not(.disabled) a')
-            if(!items.length) return
             switch(e.code){
+                case 27:
+                    dropdown.hide()
+                    break
                 case 38:
-                    items[items.length-1].focus()
+                    dropdown.menu.focus(-1)
                     break
                 case 40:
-                    items[0].focus()
+                    dropdown.menu.focus(0)
             }
         }else{
-            dropdown.toggle()
+            dropdown.show()
         }
     })
 });
