@@ -27,6 +27,7 @@ Moostrap.Alert = new Class({
             this.container.destroy()
             this.fireEvent('closed')
         }
+        return true
     }
 });
 

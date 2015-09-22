@@ -63,9 +63,12 @@ Moostrap.ButtonGroup = new Class({
         return this.options.type || this.element.getElement('input[type]').get('type').toLowerCase();
     },
 
-    // 只获取已创建的对象
+    // 返回buttons
     get_buttons: function(){
-        return this.get_components(this.element.getElements('.btn'), Moostrap.Button.prototype.options.store_name)
+        //return this.get_components(this.element.getElements('.btn'), Moostrap.Button.prototype.options.store_name)
+        return this.element.getElements('.btn').map(function(item){
+            return this.get_create_button(item)
+        }.bind(this))
     },
     
     // 获取按下状态的buttons, 返回[]

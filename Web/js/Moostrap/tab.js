@@ -1,84 +1,139 @@
 Moostrap.Tab = new Class({
-    Implements: [Options, Events],
+    Extends: Moostrap.Component,
     options: {
+        store_name: 'tab',
+        selector: '[data-toggle=tab], [data-toggle=pill]',
         duration: 150
     },
 
-    initialize: function(nav_container){
-        this.nav_container = nav_container
+    initialize: function(element, tab_nav, options){
+        this.parent(element, options)
+        this.tab_nav = tab_nav
+        this.container = this._get_container() // getParent('li')
+        this.content = this._get_content()
+        this.dropdown = this._get_dropdown() // 判断是否Dropdown里的项. 返回的是一个 $(.dropdown)
     },
 
     toElement: function(){
-        return this.nav_container
+        return this.container
     },
 
-    is_active: function(el){
-        return el.getParent('li').hasClass('active')
+    _get_container: function(){
+        return this.element.getParent('li')
     },
 
-    get_togglers: function(el){
-        el = el || this.nav_container
-        return el.getElements('[data-toggle=tab], [data-toggle=pill]')
+    _get_content: function(){
+        return this.get_target(this.element)
     },
 
-    show: function(el){
-        if(this.is_active(el)) return
-        this.nav_container.getChildren().each(function(item){
-            var is_contains = item.contains(el)
-            if(item.hasClass('dropdown')){
-                if(is_contains){
-                    item.getElements('.dropdown-menu > li').each(function(i){
-                        if(i.contains(el)){
-                            i.addClass('active')
+    // 判断是否dropdown里的项, 返回element
+    _get_dropdown: function(){
+        return this.element.getParent('.dropdown')
+    },
 
-                        }else{
-                            i.removeClass('active')
-                        }
-                    })
-                    item.hasClass('active') || item.addClass('active')
-                }else{
-                    item.getElements('.dropdown-menu > li').removeClass('active')
-                    item.removeClass('active')
-                }
-            }else{
-                if(is_contains){
-                    item.addClass('active')
-                }else{
-                    item.removeClass('active')
-                }
-            }
-        }.bind(this));
-        this.get_togglers().each(function(item){
-            item.set('aria-expanded', item==el)
-        })
+    is_active: function(){
+        return this.container.hasClass('active')
+    },
 
-        var content = Moostrap.get_target(el)
-        var active_content = content.getSiblings('.tab-pane.active')[0]
-        active_content.removeClass('in')
-        if(active_content.hasClass('fade')){
+    is_disabled: function(){
+        return this.element.match('.disabled, :disabled')
+    },
+
+    hide: function(){
+        if(!this.is_active() || this.is_disabled()) return false
+        this.fireEvent('hide')
+        this.element.set('aria-expanded', false)
+        this.container.removeClass('active')
+        if(this.dropdown) this.dropdown.removeClass('active') 
+        if(this.content.hasClass('fade')){
+            this.content.removeClass('in');
             (function(){
-                active_content.removeClass('active')
-                content.addClass('active')
-                       .addClass('in')
-            }).delay(this.options.duration)
+                this.content.removeClass('active')
+                this.fireEvent('hidden')
+            }).delay(this.options.duration, this)
         }else{
-            active_content.removeClass('active')
-            content.addClass('active')
-                   .addClass('in')
+            this.content.removeClass('active')
+            this.fireEvent('hidden')
         }
+        return true
+    },
+
+    show: function(){
+        if(this.is_active()|| this.is_disabled()) return false
+        this.fireEvent('show')
+        this.element.set('aria-expanded', true)
+        this.container.addClass('active');
+        if(this.dropdown) this.dropdown.addClass('active') 
+        if(this.content.hasClass('fade')){
+            (function(){
+                this.content.addClass('active')
+                this.content.addClass('in')
+                this.fireEvent('shown')
+            }).delay(this.options.duration, this)
+        }else{
+            this.content.addClass('active')
+            this.fireEvent('shown')
+        }
+        return true
     }
-});
+})
+
+
+Moostrap.TabNav = new Class({
+    Extends: Moostrap.Component,
+    options: {
+        store_name: 'tab_nav',
+        selector: '.nav-tabs',
+        duration: 150
+    },
+
+    initialize: function(element, options){
+        this.parent(element, options)
+        this.active = this._get_active_tab()
+    },
+
+    _get_active_tab: function(){
+        var tabs = this.element.getElements(Moostrap.Tab.prototype.options.selector).filter('.active')
+        if(tabs.length) return this.get_create_tab(tab[0])
+        return null
+    },
+
+    get_create_tab: function(tab){
+        return tab.retrieve(Moostrap.Tab.prototype.options.store_name) || new Moostrap.Tab(tab, this)
+    },
+
+    get_tabs: function(){
+        var tabs = this.element.getElements(Moostrap.Tab.prototype.options.selector)
+        return tabs.map(function(item){
+            return this.get_create_tab(item)
+        }.bind(this))
+    },
+
+    hide: function(){
+        if(!this.active) return false
+        var action = this.active.hide()
+        this.active = null
+        return action
+    },
+
+    show: function(tab){
+        tab = this.get_create_tab(tab)
+        console.log(tab)
+        console.log(this.active)
+        if(tab==this.active) return false
+        this.active && this.active.hide()
+        var action = tab.show()
+        this.active = tab
+        return action
+    }
+})
 
 
 window.addEvent('domready', function(){
     $(document.body).addEvent('click:relay(ul.nav-tabs, ul.nav-pills)', function(e, target){
         e.preventDefault()
         if(!e.target.match('[data-toggle=tab], [data-toggle=pill]')) return
-        var tab = target.retrieve('tab')
-        if(!tab){
-            tab = new Moostrap.Tab(target)
-            target.store('tab', tab)
-        }
-        tab.show(e.target)
+        var tab_nav = target.retrieve('tab_nav') || new Moostrap.TabNav(target)
+        tab_nav.show(e.target)
     });
 });

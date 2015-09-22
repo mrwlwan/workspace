@@ -38,7 +38,7 @@ var Moostrap = {
             return this;
         },
 
-        // 只获取已创建的对象
+        // 只获取已创建的对象(考虑取代这个方法)
         get_components: function(els, name){
             var components = []
             els.each(function(item){

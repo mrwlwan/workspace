@@ -12,8 +12,8 @@ Moostrap.DropDownMenu = new Class({
     },
 
     // enabled参数指定返回非.disabled的items
-    get_items: function(enabled){
-        if(enabled){
+    get_items: function(ignore){
+        if(ignore){
             return this.element.getElements('li:not(.disable)').filter(function(item){
                 return item.getElement('a') 
             })
@@ -62,10 +62,9 @@ Moostrap.DropDown = new Class({
         this.menu = this._get_menu();
     },
     
-    _get_container: function(toggler){
-        toggler = toggler || this.element // clear() 须要带参数
-        var container = this.get_target(toggler)
-        return container || toggler.getParent()
+    _get_container: function(){
+        var container = this.get_target(this.element)
+        return container || this.element.getParent()
     },
 
     _get_menu: function(){
@@ -73,16 +72,22 @@ Moostrap.DropDown = new Class({
         return el.retrieve(Moostrap.DropDownMenu.prototype.options.store_name) || new Moostrap.DropDownMenu(el, this)
     },
 
-    get_previous: function(){ // 搜寻左边的dropdown.
+    get_previous: function(ignore){ // 搜寻左边的dropdown.
         var previous = this.container.getPrevious('.dropdown')
-        var other_target = previous && previous.getElement('[data-toggle=dropdown]')
-        return other_target && (other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target))
+        if(!previous) return null
+        var other_target = previous.getElement('[data-toggle=dropdown]')
+        var dropdown = other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target)
+        if(ignore && dropdown.is_disabled()) return dropdown.get_previous(ignore)
+        return dropdown
     },
 
-    get_next: function(){ // 搜寻右边的dropdown.
+    get_next: function(ignore){ // 搜寻右边的dropdown.
         var next = this.container.getNext('.dropdown')
-        var other_target = next && next.getElement('[data-toggle=dropdown]')
-        return other_target && (other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target))
+        if(!next) return null
+        var other_target = next.getElement('[data-toggle=dropdown]')
+        var dropdown = other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target)
+        if(ignore && dropdown.is_disabled()) return dropdown.get_next(ignore)
+        return dropdown
     },
 
     get_items: function(enable){
@@ -106,7 +111,7 @@ Moostrap.DropDown = new Class({
     },
 
     hide: function(){
-        if(!this.is_active()) return false
+        if(!this.is_active() || this.is_disabled()) return false
         this.fireEvent('hide')
         $$(this.options.backdrop).destroy(); // 手机端
         this.element.set('aria-expanded', false)
@@ -169,8 +174,8 @@ window.addEvent('domready', function(){
         if(!/(37|38|39|40|27|32|13)/.test(e.code) || /input|textarea/i.test(e.target.tagName)) return
         e.stop()
         var dropdown = target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(target)
-        if(e.code==37) dropdown = dropdown.get_previous()
-        if(e.code==39) dropdown = dropdown.get_next()
+        if(e.code==37) dropdown = dropdown.get_previous(true)
+        if(e.code==39) dropdown = dropdown.get_next(true)
         if(!dropdown) return
         if(dropdown.is_active()){
             switch(e.code){
