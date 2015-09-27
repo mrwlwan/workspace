@@ -6,10 +6,16 @@ Moostrap.transition = function(){
       OTransition      : 'oTransitionEnd otransitionend',
       transition       : 'transitionend'
     }
+    var transitionend = null
     for(var name in transitionend_event_names){
-      if(document.body.style[name] !== undefined) return transitionend_event_names[name]
+        if(document.body.style[name] !== undefined){
+            transitionend = transitionend_event_names[name]
+            break
+        }
     }
-    return false // explicit for ie8 (  ._.)
+    if(!transitionend) return false // explicit for ie8 (  ._.)
+    Element.NativeEvents[transitionend] = 2
+    return transitionend
 }();
 
 Moostrap.emulate_transition = function(duration, target){
