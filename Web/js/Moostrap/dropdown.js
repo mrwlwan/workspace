@@ -76,7 +76,7 @@ Moostrap.DropDown = new Class({
         var previous = this.container.getPrevious('.dropdown')
         if(!previous) return null
         var other_target = previous.getElement('[data-toggle=dropdown]')
-        var dropdown = other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target)
+        var dropdown = other_target.retrieve(Moostrap.DropDown.prototype.options.store_name) || new Moostrap.DropDown(other_target)
         if(ignore && dropdown.is_disabled()) return dropdown.get_previous(ignore)
         return dropdown
     },
@@ -85,7 +85,7 @@ Moostrap.DropDown = new Class({
         var next = this.container.getNext('.dropdown')
         if(!next) return null
         var other_target = next.getElement('[data-toggle=dropdown]')
-        var dropdown = other_target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(other_target)
+        var dropdown = other_target.retrieve(Moostrap.DropDown.prototype.options.store_name) || new Moostrap.DropDown(other_target)
         if(ignore && dropdown.is_disabled()) return dropdown.get_next(ignore)
         return dropdown
     },
@@ -168,12 +168,12 @@ window.addEvent('domready', function(){
     })
     $(document.body).addEvent('click:relay([data-toggle=dropdown])', function(e, target){
         e.stop()
-        var dropdown = target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(target)
+        var dropdown = target.retrieve(Moostrap.DropDown.prototype.options.store_name) || new Moostrap.DropDown(target)
         dropdown.toggle()
     }).addEvent('keydown:relay([data-toggle=dropdown])', function(e, target){
         if(!/(37|38|39|40|27|32|13)/.test(e.code) || /input|textarea/i.test(e.target.tagName)) return
         e.stop()
-        var dropdown = target.retrieve(Moostrap.DropDown.prototype.store_name) || new Moostrap.DropDown(target)
+        var dropdown = target.retrieve(Moostrap.DropDown.prototype.options.store_name) || new Moostrap.DropDown(target)
         if(e.code==37) dropdown = dropdown.get_previous(true)
         if(e.code==39) dropdown = dropdown.get_next(true)
         if(!dropdown) return
