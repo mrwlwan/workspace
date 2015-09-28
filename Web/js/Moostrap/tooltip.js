@@ -13,7 +13,7 @@ Moostrap.Tooltip = new Class({
         //animation: true,
         placement: 'top', //top, bottom, left, right
         template: '<div class="tooltip" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
-        triggers: ['click', 'hover', 'hover'], //click, hover, focus, manual
+        triggers: ['click', 'hover', 'focus'], //click, hover, focus, manual
         title: '',
         delay: 0,
         html: false,
@@ -39,10 +39,10 @@ Moostrap.Tooltip = new Class({
     add_default_events: function(triggers){
         if(!triggers.length) return
         var TooltipTriggerMap = Moostrap.TooltipTriggerMap
-        if(!triggers.contains('focus')){
-            triggers = Array.clone(triggers)
-            triggers.push('focus') // 默认添加 focus 事件.
-        }
+        //if(triggers.contains('click') && !triggers.contains('focus')){
+            //triggers = Array.clone(triggers)
+            //triggers.push('focus') // 默认添加 focus 事件.
+        //}
         triggers.each(function(trigger){
             switch(trigger){
                 case 'click':
@@ -63,6 +63,9 @@ Moostrap.Tooltip = new Class({
         if(!this.is_active()){
             this.show()
             this.state.click = true
+        }else if(!this.state.focus && !this.state.hover){
+            this.hide()
+            this.state.click = false
         }
     },
 
@@ -101,6 +104,7 @@ Moostrap.Tooltip = new Class({
             this.panel = this.panel[0].dispose()
             temp.destroy()
             this.element.grab(this.panel, 'after')
+            this.panel.set('id', 'panel_'+String.uniqueID())
         }
         return this.panel
     },
@@ -116,9 +120,10 @@ Moostrap.Tooltip = new Class({
         this.element.set('title', '')
     },
 
-    set_content: function(){
+    set_content: function(title){
+        title = title || this.get_title()
         this.panel.getElement('.tooltip-inner')
-            .set(this.options.html ? 'html' : 'text', this.get_title())
+            .set(this.options.html ? 'html' : 'text', title)
     },
 
     is_active: function(){
@@ -126,8 +131,10 @@ Moostrap.Tooltip = new Class({
     },
 
     set_position: function(){
-        this.panel.addClass('fade in '+this.options.placement)
-        var placement = this.options.placement
+        var placement = this.options.placement || this.element.get('data-placement')
+        this.panel
+            .addClass('fade in '+placement)
+            .setStyle('display', 'block')
         var coor = this.element.getCoordinates()
         var panel_coor = this.panel.getCoordinates()
         //var viewport_coor = document.getElement(this.viewport)
@@ -146,12 +153,12 @@ Moostrap.Tooltip = new Class({
                 panel_coor.left = coor.left+(coor.width-panel_coor.width)/2
                 break
             case 'left':
-                panel_coor.top = coor.top+(coor.height-panel_coor.height)/2+1
+                panel_coor.top = coor.top+(coor.height-panel_coor.height)/2
                 panel_coor.left = coor.left-panel_coor.width
                 break
             case 'right':
-                panel_coor.top = coor.top+(coor.height-panel_coor.height)/2-1
-                panel_coor.left = coor.left+panel_cool.width
+                panel_coor.top = coor.top+(coor.height-panel_coor.height)/2
+                panel_coor.left = coor.left+coor.width
                 break
         }
         this.panel.setStyles({
@@ -163,6 +170,7 @@ Moostrap.Tooltip = new Class({
     show: function(){
         if(this.is_active()) return false
         this.fireEvent('show')
+        this.element.set('aria-describedby', this.panel.get('id'))
         this.set_content()
         this.set_position.delay(this.options.delay, this)
         this.fireEvent.delay(Moostrap.transition && (this.options.delay+this.options.duration) || 0, this, 'shown')
@@ -172,8 +180,10 @@ Moostrap.Tooltip = new Class({
     hide: function(){
         if(!this.is_active()) return false
         this.fireEvent('hide')
+        this.element.erase('aria-describedby')
         this.panel.removeClass.delay(this.options.delay, this.panel, 'in top bottom left right');
         (function(){
+            this.panel.setStyle('display', 'none')
             this.panel.removeClass('fade')
             this.fireEvent('hidden')
         }).delay(Moostrap.transition && (this.options.delay+this.options.duration) || 0, this)
@@ -227,13 +237,13 @@ Moostrap.TooltipDelegate = new Class({
         return options
     },
 
-    add_default_events: function(){
-        if(!this.options.triggers.length) return
+    add_default_events: function(triggers){
+        if(!triggers || !triggers.length) return
         var triggers = this.options.triggers
-        if(!triggers.contains('focus')){
-            triggers = Array.clone(triggers)
-            triggers.push('focus') // 默认添加 focus 事件.
-        }
+        //if(triggers.contains('click') && !triggers.contains('focus')){
+            //triggers = Array.clone(triggers)
+            //triggers.push('focus') // 默认添加 focus 事件.
+        //}
         var TooltipTriggerMap = Moostrap.TooltipTriggerMap
         triggers.each(function(trigger){
             switch(trigger){
