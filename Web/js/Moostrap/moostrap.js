@@ -54,7 +54,7 @@ var Moostrap = {
                 selector = el.get('href')
                 selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
             }
-            return selector && $$(selector)[0] || null
+            return selector && document.getElement(selector) || null
         }
     })
 };
