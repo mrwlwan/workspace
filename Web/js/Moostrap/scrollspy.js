@@ -18,7 +18,7 @@ Moostrap.ScrollSpyItem = new Class({
     },
 
     get_top: function(){
-        return this.target.getPosition().y-this.options.offset
+        return this.target.getPosition().y-this.target.getStyle('margin-top').toInt()/2-this.options.offset
     },
 
     is_active: function(){
@@ -83,21 +83,30 @@ Moostrap.ScrollSpy = new Class({
         })
     },
 
-    get_scroll_target: function(){
-        var scroll_top = this.scroll_element.getScroll().y
-        var items = this.scrollspy_items
-        for(var i=0; i<items.length; i++){
-            if(scroll_top<items[0].get_top()) return null
-            if(scroll_top>=items[items.length-1].get_top()) return items[items.length-1]
-            if(scroll_top>=items[i].get_top() && scroll_top<items[i+1].get_top()) return items[i]
-        }
-        return null
-    },
-    
     get_create_item: function(el){
         return el.retrieve(Moostrap.ScrollSpyItem.prototype.options.store_name) || new Moostrap.ScrollSpyItem(el, {offset: this.offset})
     },
 
+    get_scroll_target: function(){
+        var items = this.scrollspy_items
+        if(this.element==this.scroll_element){
+            var element_top = this.element.getPosition().y
+            if(items[0].get_top()>element_top) return null
+            if(items.getLast().get_top()<=element_top) return items.getLast()
+            for(var i=0; i<items.length-1; i++){
+                if(items[i].get_top()<=element_top && items[i+1].get_top()>element_top) return items[i]
+            }
+        }else{
+            var scroll_top = this.scroll_element.getScroll().y
+            if(scroll_top<items[0].get_top()) return null
+            if(scroll_top>=items.getLast().get_top()) return items[items.length-1]
+            for(var i=0; i<items.length-1; i++){
+                if(scroll_top>=items[i].get_top() && scroll_top<items[i+1].get_top()) return items[i]
+            }
+        }
+        return null
+    },
+    
     get_scrollspy_items: function(){
         var items = document.getElements(this.element.get('data-target')+' '+ this.options.item_selector)
                             .map(function(el){
