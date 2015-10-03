@@ -45,7 +45,7 @@ Moostrap.Component = new Class({
     },
 
     store: function(){
-        this.element.store(this.options.store_name, this)
+        this.element.store(this.store_name || this.options.store_name, this)
     },
 
     retrieve: function(name){ // 方便取得参数target的component. target为Elemnet或者Component,都可以直接调用.retrieve
