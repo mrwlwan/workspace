@@ -43,6 +43,9 @@ class ProductModel(Base):
     def is_expiries(self):
         return datetime.date.today()-self.update_date>=1
 
+    def brief_sku:
+        pass
+
 
 class SkuModel(Base):
     """ Sku。json['skuMap']"""

@@ -14,6 +14,8 @@ class Application(tornado.web.Application):
         handlers = [
             (r'/', ledia.HomeHandler),
             #(r'/init', ledia.InitHandler),
+            (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': 'g:/lib/'}),
+            (r'/staticw/(.*)', tornado.web.StaticFileHandler, {'path': 'g:/workspace/Web/'}),
         ]
         settings = {
             'debug': True,
