@@ -1,13 +1,17 @@
+{% import const %}
 <tr>
-    <th>{{ index }}</th>
+    <th><a href="/product/{{ product.id }}" target="_blank" style="color: black">{{ index }}</a></th>
     <td><a href="http://detail.1688.com/offer/{{product.offer_id}}.html" target="_blank"><img src="/media/img/product/{{ product.offer_id }}.jpg" /></a></td>
-    <td class="editable">{{ product.subject or '' }}</td>
-    <td class="editable">{{ product.code or '' }}</td>
-    <td class="editable">{{ product.brand or ''}}</td>
-    <td class="editable">{{ product.pattern or ''}}</td>
-    <td class="editable">{{ product.fabric or ''}}</td>
-    <td class="editable">{{ product.fabric_content or '' }}</td>
-    <td class="editable">{{ product.fabric_scale or ''}}</td>
-    <td class="editable selectable">{{ product.status or ''}}</td>
+    <td>{{ product.subject or '' }}</td>
+    <td class="editable selectable" role="category">{{ product.category or '' }}</td>
+    <td>{{ product.code or '' }}</td>
+    <td>{{ product.brand or ''}}</td>
+    <td>{{ product.pattern or ''}}</td>
+    <td>{{ product.fabric or ''}}</td>
+    <td>{{ product.fabric_content or '' }}</td>
+    <td>{{ product.fabric_scale or ''}}</td>
+    <td class="{{ const.color.get(product.sku_status, '') }}">{{ product.book_count or ''}}</td>
+    <td class="{{ product.sale_count_diff>=10 and 'success' or '' }}">{{ product.sale_count_diff or '' }}</td>
+    <td class="{% if product.status!='回收站' %}editable selectable {% end %}{{const.color.get(product.status, '') }}" role="status">{{ product.status or ''}}</td>
     <td class="editable">{{ product.remarks or ''}}</td>
 </tr>

@@ -1,15 +1,17 @@
+{% import re %}
+{% set sub_path = base_path + '?' + re.sub(r'&*page=\d+', '', request.query) %}
 <nav>
     <ul class="pagination" style="margin:0px;">
         <li{% if page<=1 %} class="disabled"{% end %}>
-            <a href="{{ base_path }}?page={{ max(page-1,1) }}">上一页</a>
+            <a href="{{ sub_path }}&page={{ max(page-1,1) }}">上一页</a>
         </li>
         {% for i in range(1, max_page+1) %}
         <li{% if i==page %} class="active"{% end %}>
-            <a href="{{ base_path }}?page={{ i }}">{{ i }}</a>
+            <a href="{{ sub_path }}&page={{ i }}">{{ i }}</a>
         </li>
         {% end %}
         <li{% if page>=max_page %} class="disabled"{% end %}>
-            <a href="{{ base_path }}?page={{ min(page+1, max_page) }}">下一页</a>
+            <a href="{{ sub_path }}&page={{ min(page+1, max_page) }}">下一页</a>
         </li>
         <li><a><b>{{ min(page*20, count) }}/{{ count }}</b></a></li>
     </ul>

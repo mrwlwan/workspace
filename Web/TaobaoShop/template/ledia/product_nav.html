@@ -1,0 +1,51 @@
+{% import const %}
+<div id="product_navbar" class="navbar navbar-default">
+    <div class="container-fluid">
+        <form method="GET" action="/" class="navbar-form navbar-right">
+            <div class="form-group">
+                <label class="control-label">分类:</label>
+                <select name="category" class="form-control">
+                    {% set category = handler.get_query_argument('category', None) %}
+                    <option{{ not category and ' selected=selected' or '' }}>全部</option>
+                    {% for item in const.category_list %}
+                        <option{{ item==category and ' selected=selected' or '' }}>{{ item }}</option>
+                    {% end %}
+                </select>
+                <label class="control-label">库存:</label>
+                <select name="sku_status" class="form-control">
+                    {% set sku_status = handler.get_query_argument('sku_status', None) %}
+                    <option{{ not sku_status and ' selected=selected' or '' }}>全部</option>
+                    {% for item in const.sku_status_list %}
+                        <option{{ item==sku_status and ' selected=selected' or '' }}>{{ item }}</option>
+                    {% end %}
+                </select>
+                <label class="control-label">状态:</label>
+                <select name="status" class="form-control">
+                    {% set status = handler.get_query_argument('status', None) %}
+                    <option{{ not status and ' selected=selected' or '' }}>全部</option>
+                    {% for item in const.status_list %}
+                        <option{{ item==status and ' selected=selected' or '' }}>{{ item }}</option>
+                    {% end %}
+                </select>
+            </div>
+            <div class="form-group" style="margin-left:5px; padding-left: 10px; border-left: 2px solid #E1E1E8">
+                <div class="input-group">
+                    <span class="input-group-btn">
+                        <select name="query_columns" class="form-control">
+                            {% set query_columns = handler.get_query_argument('query_columns', None) %}
+                            {% for item in const.query_columns_list %}
+                                <option{{ item[0]==query_columns and ' selected=selected' or '' }}>{{ item[0] }}</option>
+                            {% end %}
+                        </select>
+                    </span>
+                    <input name="keywords" type="text" class="form-control" placeholder="关键字" value="{{ handler.get_query_argument('keywords', '') }}">
+                    <span class="input-group-btn">
+                        <button role="clear" class="btn btn-default">清除</button>
+                        <button type="submit" class="btn btn-default">筛选</button>
+                    </span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+

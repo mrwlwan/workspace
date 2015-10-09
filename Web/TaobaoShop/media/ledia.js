@@ -3,8 +3,8 @@ var EditableControl = new Class({
     store_name: 'editable_contraol',
     selector: 'td',
     options: {
-        'type': '',
-        'select_options': ['']
+        'type': ''
+        //'select_options': ['']
     },
 
     initialize: function(element, options){
@@ -22,8 +22,12 @@ var EditableControl = new Class({
     create_control: function(){
         switch(this.type){
             case 'select':
+                var options = {
+                    'category': ['未分类', '夏装', '春秋冬装', '饰品', '邮费', '其它'],
+                    'status': ['上架', '下架']
+                }
                 var element = new Element('select', {'class': 'form-control'})
-                element.set('html', this.options.select_options.map(function(item){
+                element.set('html', options[this.element.get('role')].map(function(item){
                     return '<option>'+item+'</option>'
                 }.bind(this)).join(''))
                 break
@@ -56,13 +60,14 @@ var EditableControl = new Class({
 
     show: function(){
         if(this.active) return false
-        //this.control.setStyle('display', 'block')
         this.element.empty()
             .grab(this.control)
         this.set_control_value()
         var element_size = this.element.getSize()
-        if(element_size.x<80){this.control.setStyle('width', 60)}
-        if(this.type!='select') this.control.setStyle('height', element_size.y-20)
+        if(this.type!='select'){
+            this.control.setStyle('height', element_size.y-20)
+            this.control.setStyle('width', Math.max(element_size.x-20, 80))
+        }else{this.control.setStyle('width', element_size.x+30)}
         this.control.focus()
         this.active = true
         return true
@@ -70,7 +75,7 @@ var EditableControl = new Class({
 
     hide: function(){
         if(!this.active) return false
-        //this.control.setStyle('display', 'none')
+        this.control.setStyle('width', 0)
         this.control.dispose()
         this.element.set('text', this.value)
         this.active = false
@@ -101,9 +106,9 @@ var EditableTable = new Class({
 
 window.addEvent('domready', function(){
     // 阻止底部导航栏.disabled按钮的默认单击事件.
-    document.getElements('nav li.disabled a').addEvent('click', function(e){
-        e.preventDefault()
-    })
+    //document.getElements('nav li.disabled a').addEvent('click', function(e){
+        //e.preventDefault()
+    //})
 
     // 实时编辑事件
     document.getElements('table').each(function(table){

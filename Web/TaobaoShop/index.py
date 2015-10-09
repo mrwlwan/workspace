@@ -13,7 +13,9 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r'/', ledia.HomeHandler),
-            #(r'/init', ledia.InitHandler),
+            #(r'/shop/(init|update)/?(all|products|skus)?', ledia.ShopHandler),
+            (r'/shop/(init|update)', ledia.ShopHandler),
+            (r'/product/(\d+)', ledia.ProductHandler),
             (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': 'g:/lib/'}),
             (r'/staticw/(.*)', tornado.web.StaticFileHandler, {'path': 'g:/workspace/Web/'}),
         ]
