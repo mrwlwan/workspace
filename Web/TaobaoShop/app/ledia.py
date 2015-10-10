@@ -3,7 +3,7 @@
 import const
 from . import base
 import model
-from sqlalchemy import or_, and_
+import sqlalchemy
 import tornado.web
 import requests
 import re, json, os, sys, datetime
@@ -152,23 +152,19 @@ class HomeHandler(base.BaseHandler):
             if value!='全部': filter_certains[arg] = value
         data = self.db.query(model.ProductModel).filter_by(**filter_certains)
         keywords = self.get_argument('keywords', None)
-        if keywords:
-            columns_dict = dict(const.query_columns_list)
-            columns = columns_dict.get(
-                self.get_argument('query_columns', '货号'),
-                const.query_columns_list[0][1]
-            )
+        query_columns = self.get_argument('query_columns', None)
+        query_columns_dict = dict(const.query_columns_dict)
+        if keywords and query_columns and query_columns in query_columns_dict:
+            columns = query_columns_dict.get(query_columns)
             keywords = keywords.lower()
             or_keywords = re.split(r' +', keywords)
             if len(or_keywords)>1:
                 keywords = or_keywords
-                method = or_
+                method = sqlalchemy.or_
             else:
                 keywords = [item.replace('\\+', '+') for item in re.split(r'(?<!\\)\++', keywords)]
-                method = and_
-            data =data.filter(method(*[getattr(model.ProductModel, columns).like('%'+keyword+'%') for keyword in keywords]))
-
-
+                method = sqlalchemy.and_
+            data = data.filter(method(*[getattr(model.ProductModel, columns).like('%'+keyword+'%') for keyword in keywords]))
             # 多列搜索, 个人暂不用
             #keywords = re.split(r' +', keywords.lower())
             #query_columns = self.get_argument('query_columns', '全文')
@@ -180,5 +176,12 @@ class HomeHandler(base.BaseHandler):
             #else:
                 #query_columns = []
             #data = self.multi_columns_query(data, model.ProductModel, query_columns, keywords)
+        sort_columns = self.get_argument('sort_columns', None)
+        sort_columns_dict = dict(const.sort_columns_dict)
+        if sort_columns and sort_columns in sort_columns_dict:
+            columns = sort_columns_dict.get(sort_columns)
+            desc = self.get_argument('desc', None)
+            columns_obj = getattr(model.ProductModel, columns)
+            data = data.order_by(columns_obj.desc() if desc else columns_obj)
         self.show_page(data, 'ledia/index.html', 20)
 

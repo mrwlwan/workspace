@@ -29,19 +29,34 @@
                 </select>
             </div>
             <div class="form-group" style="margin-left:5px; padding-left: 10px; border-left: 2px solid #E1E1E8">
+                <label class="control-label">排序:</label>
+                <select name="sort_columns" class="form-control">
+                    {% set sort_columns = handler.get_query_argument('sort_columns', None) %}
+                    <option{{ not sort_columns and ' selected=selected' or '' }}>默认</option>
+                    {% for item in const.sort_columns_dict %}
+                        <option{{ item[0]==sort_columns and ' selected=selected' or '' }}>{{ item[0] }}</option>
+                    {% end %}
+                </select>
+                <div class="checkbox">
+                    <label>
+                        <input name="desc" type="checkbox"{{ handler.get_query_argument('desc', None) and ' checked=true' or '' }}>降序
+                    </label>
+                </div>
+            </div>
+            <div class="form-group" style="margin-left:5px; padding-left: 10px; border-left: 2px solid #E1E1E8">
                 <div class="input-group">
                     <span class="input-group-btn">
                         <select name="query_columns" class="form-control">
                             {% set query_columns = handler.get_query_argument('query_columns', None) %}
-                            {% for item in const.query_columns_list %}
+                            {% for item in const.query_columns_dict %}
                                 <option{{ item[0]==query_columns and ' selected=selected' or '' }}>{{ item[0] }}</option>
                             {% end %}
                         </select>
                     </span>
-                    <input name="keywords" type="text" class="form-control" placeholder="关键字" value="{{ handler.get_query_argument('keywords', '') }}">
+                    <input name="keywords" type="text" class="form-control" placeholder="关键字" autocomplete="off" value="{{ handler.get_query_argument('keywords', '') }}">
                     <span class="input-group-btn">
+                        <button type="submit" class="btn btn-default pull-right">确定</button>
                         <button role="clear" class="btn btn-default">清除</button>
-                        <button type="submit" class="btn btn-default">筛选</button>
                     </span>
                 </div>
             </div>

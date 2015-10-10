@@ -82,7 +82,7 @@ var EditableControl = new Class({
         return true
     }
 })
-        
+
 
 var EditableTable = new Class({
     Extends: Moostrap.Component,
@@ -101,7 +101,7 @@ var EditableTable = new Class({
             var control = target.retrieve(EditableControl.prototype.store_name) || new EditableControl(target)
             if(control.show()) this.active_control = control
         }.bind(this))
-    }
+    },
 })
 
 window.addEvent('domready', function(){
