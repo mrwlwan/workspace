@@ -3,8 +3,9 @@ var EditableControl = new Class({
     store_name: 'editable_contraol',
     selector: 'td',
     options: {
-        'type': ''
+        'type': '',
         //'select_options': ['']
+        colors: {'下架': 'warning', '回收站': 'danger'}
     },
 
     initialize: function(element, options){
@@ -13,6 +14,7 @@ var EditableControl = new Class({
         this.control = this.create_control()
         this.value = this.element.get('text')
         this.active = false
+        this.request = null
     },
 
     get_type: function(){
@@ -34,13 +36,52 @@ var EditableControl = new Class({
             default:
                 var element = new Element('textarea', {
                     'class': 'form-control',
-                    'rows': 2
+                    'autocomplete': 'off'
+                    //'rows': 2
                 })
         }
         element.addEvent('blur', function(e){
-            this.hide()
+            this.submit()
+        }.bind(this)).addEvent('keypress', function(e){
+            if(e.code==27) this.hide()
         }.bind(this))
         return element
+    },
+
+    submit: function(){
+        var value = this.get_control_value()
+        if(value==this.value.trim()) return this.hide()
+        var key = this.element.get('role')
+        if(!this.request){
+            var product_id = this.element.getParent('tr').get('data-id')
+            this.request = new Request.JSON({
+                url: '/product/'+product_id,
+                method: 'post',
+                onSuccess: function(response){
+                    if(response.error) return
+                    if(this.type=='select') this.toggle_color(response.data[key])
+                    this.value = response.data[key]
+                    this.hide()
+                }.bind(this)
+            })
+        }
+        this.request.send(key+'='+ encodeURI(value))
+    },
+    
+    toggle_color: function(value){
+        var color = this.options.colors[this.value]
+        if(color) this.element.removeClass(color)
+        color = this.options.colors[value]
+        if(color) this.element.addClass(color)
+    },        
+
+    get_control_value: function(){
+        switch(this.type){
+            case 'select':
+                return this.control.getSelected()[0].get('text').trim()
+            default:
+                return this.control.get('value').trim()
+        }
     },
 
     set_control_value: function(value){
@@ -54,7 +95,7 @@ var EditableControl = new Class({
                 }.bind(this))
                 break
             default:
-                this.control.set('text', value==undefined ? this.value : value)
+                this.control.set('value', value==undefined ? this.value : value)
         }
     },
 
@@ -69,6 +110,7 @@ var EditableControl = new Class({
             this.control.setStyle('width', Math.max(element_size.x-20, 80))
         }else{this.control.setStyle('width', element_size.x+30)}
         this.control.focus()
+        this.type!='select' && this.control.select()
         this.active = true
         return true
     },
@@ -100,7 +142,22 @@ var EditableTable = new Class({
         this.element.addEvent('dblclick:relay(td.editable)', function(e, target){
             var control = target.retrieve(EditableControl.prototype.store_name) || new EditableControl(target)
             if(control.show()) this.active_control = control
-        }.bind(this))
+        }.bind(this)).getElement('tbody').addEvent('dblclick:relay(th)', function(e, target){
+            if(!confirm('确定删除商品?')) return
+            var row = target.getParent('tr')
+            var product_id = row.get('data-id')
+            var request = new Request.JSON({
+                url: 'product/'+product_id,
+                method: 'delete',
+                emulation: false,
+                onSuccess: function(response){
+                    console.log(response)
+                    if(response.error) return
+                    row.destroy()
+                }                    
+            })
+            request.send()
+        })
     },
 })
 

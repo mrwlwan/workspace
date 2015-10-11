@@ -48,6 +48,23 @@ class ProductHandler(base.BaseHandler):
     def get(self, product_id):
         self.write(product_id)
 
+    def post(self, product_id):
+        response = {'error': '', 'data': {}}
+        for product in self.db.query(model.ProductModel).filter_by(id=product_id):
+            for key in self.request.arguments:
+                value = self.get_argument(key)
+                setattr(product, key, value)
+                self.db.commit()
+                response['data'][key] = value
+        return self.write(response)
+
+    def delete(self, product_id):
+        for product in self.db.query(model.ProductModel).filter_by(id=product_id):
+            print(product)
+            self.db.delete(product)
+        self.db.commit()
+        self.write({'error': '', 'data': product_id})
+
 
 class ShopHandler(FetchHandler):
     def initialize(self):
