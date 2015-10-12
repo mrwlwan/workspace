@@ -54,7 +54,7 @@ class BaseHandler(tornado.web.RequestHandler):
             return query.filter(*keyword_certains)
         return query
 
-    def show_page(self, query, template, per_page, *args, **kwargs):
+    def show_page(self, template, query, per_page, *args, **kwargs):
         page = int(self.get_argument('page', 1))
         if page<1:
             return

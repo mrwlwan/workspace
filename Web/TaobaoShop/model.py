@@ -16,6 +16,7 @@ class ConfigModel(Base):
     """ 全局设定. """
     __tablename__ = 'configs'
     id = Column(Integer, primary_key=True)
+    shop_name = Column(String, nullable=False)
     update_date = Column(Date, default=datetime.date.today)
 
     def is_expiries(self):
@@ -75,11 +76,11 @@ class ProductModel(Base):
     def orderd_sku(self):
         result = {}
         for sku in self.ordered_skus_by_size():
-            if sku.color not in result: result[sku.color] = colletions.OrderedDict()
+            if sku.color not in result: result[sku.color] = collections.OrderedDict()
             result[sku.color][sku.size] = {
-                'book_count': (sku.book_count, sku.last_book_count),
-                'sale_count': (sku.sale_count, sku.last_sale_count),
-                'price': (sku.price, sku.last_price),
+                'book_count': sku.book_count,
+                'sale_count': sku.sale_count,
+                'price': sku.price,
             }
         return result
 
@@ -98,17 +99,17 @@ class ProductModel(Base):
         """ 单价差值. """
         return self.price - self.last_price
 
-    def _sku_sort(self, sku):
-        size = sku.size.lower()
-        size_search = reg.search(size)
-        if reg.search:
-            return order.get(size_search.group(), 100)
-        return size
 
     def ordered_skus_by_size(self):
         order = {'xs': 0, 's': 1, 'm': 2, 'l': 3, 'xl': 4, 'xxl': 5, 'xxxl': 6, 'xxxxl': 7}
         reg = re.compile(r'x*[sl]|m')
-        return sorted(self.skus, key=self._sku_sort)
+        def _sku_sort(sku):
+            size = sku.size.lower()
+            size_search = reg.search(size)
+            if size_search:
+                return order.get(size_search.group(), 100)
+            return size
+        return sorted(self.skus, key=_sku_sort)
 
     # 判断是否过期需要重新更新
     def is_expiries(self):

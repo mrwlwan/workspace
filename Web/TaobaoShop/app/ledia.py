@@ -46,7 +46,8 @@ class FetchHandler(base.BaseHandler, base.FetchHelper):
 
 class ProductHandler(base.BaseHandler):
     def get(self, product_id):
-        self.write(product_id)
+        product = self.db.query(model.ProductModel).filter_by(id=product_id).first()
+        product and self.render('ledia/product.html', product=product)
 
     def post(self, product_id):
         response = {'error': '', 'data': {}}
@@ -200,5 +201,5 @@ class HomeHandler(base.BaseHandler):
             desc = self.get_argument('desc', None)
             columns_obj = getattr(model.ProductModel, columns)
             data = data.order_by(columns_obj.desc() if desc else columns_obj)
-        self.show_page(data, 'ledia/index.html', 20)
+        self.show_page('ledia/index.html', data, 20)
 
