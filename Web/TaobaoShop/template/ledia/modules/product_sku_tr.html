@@ -6,12 +6,13 @@
 {% for color in sku %}
 {% set color_once = True %}
 {% for size in sku[color] %}
-<tr data-id="{{ product.id }}">
+<tr data-id="{{ product.id }}", data-url="/product/{{product.id}}">
     {% if once %}
+    <th rowspan={{rows_count}} class="deletable">1</th>
     <td rowspan={{rows_count}}><a href="http://detail.1688.com/offer/{{product.offer_id}}.html" target="_blank"><img src="/media/img/product/{{ product.offer_id }}.jpg" /></a></td>
     <td rowspan={{rows_count}}><a href="http://detail.1688.com/offer/{{product.offer_id}}.html" target="_blank">{{ product.subject or '' }}</a></td>
     <td rowspan={{rows_count}}>{{ product.code or '' }}</td>
-    <td rowspan={{rows_count}} role="status">{{ product.status or ''}}</td>
+    <td rowspan={{rows_count}} role="status" class="editable selectable">{{ product.status or ''}}</td>
     {% end %}
     {% if color_once %}
     <td rowspan={{len(sku[color])}}>{{color}}</td>
@@ -22,7 +23,7 @@
     <td>{{sku[color][size]['book_count']}}</td>
     <td>{{sku[color][size]['sale_count']}}</td>
     {% if once %}
-    <td rowspan={{rows_count}} role="remarks">{{ product.remarks or ''}}</td>
+    <td rowspan={{rows_count}} role="remarks" class="editable">{{ product.remarks or ''}}</td>
     {% set once = False %}
     {% end %}
 </tr>

@@ -3,42 +3,21 @@
 {% block body_content %}
 {% import itertools %}
 {% set iteration=itertools.count(start_index) %}
-{% module Template('ledia/product_nav.html') %}
+{% module Template('ledia/modules/products_nav.html') %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-12">
-            <table class="table table-bordered table-hover products-table">
-                <thead>
-                    <tr>
-                        <th style="width:10px;">#</th>
-                        <th style="width:100px;">图片</th>
-                        {% set sort_columns = handler.get_query_argument('sort_columns', None) %}
-                        {% set desc =handler.get_query_argument('desc', None) %}
-                        {% set sort_items = [('标题', 180), ('分类', 70), ('货号', 70), ('品牌', 70), ('图案', 70), ('面料', 80), ('成分', 80), ('含量', 70), ('库存', 70), ('销量', 70), ('状态', 70)] %}
-                        {% for item in sort_items %}
-                        <th class="sortable" style="width:{{ item[1] }}px">{{ item[0] }}<span class="glyphicon {{ sort_columns==item[0] and (desc and 'glyphicon-triangle-bottom' or 'glyphicon-triangle-top') or '' }}"</span></th>
-                        {% end %}
-                        <th>备注</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for product in data %}
-                    {% module Template('ledia/product_tr.html', index= next(iteration), product=product) %}
-                {% end %}
-                </tbody>
-            </table>
+            {% module Template('ledia/modules/products_table.html', iteration=iteration, products=data) %}
         </div>
     </div>
     <div class="row">
         <div class="col-md-12">
-            {% module Template('nav.html', base_path='', page=page, max_page=max_page, start_index=start_index, count=count) %}
+            {% module Template('modules/paginate.html', base_path='', page=page, max_page=max_page, start_index=start_index, count=count) %}
         </div>
     </div>
 </div>
 {% end %}
+
 {% block script %}
-<script src="/staticw/js/Moostrap/moostrap.js"></script>
-<script src="/media/ledia.js"></script>
-<script src="/media/product_nav.js"></script>
-<script src="/media/nav.js"></script>
+<script src="/media/index.js"></script>
 {% end %}
