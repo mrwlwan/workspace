@@ -1,6 +1,17 @@
 {% import const %}
 <div class="navbar navbar-default products-navbar">
     <div class="container-fluid">
+        <ul class="nav navbar-nav">
+            <li><a href="/">首页</a></li>
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle">菜单<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="/shop/update"><span class="glyphicon glyphicon-refresh pull-right"></span>更新</a></li>
+                    <li><a href="/shop/init"><span class="glyphicon glyphicon-warning-sign pull-right"></span>初始化</a></li>
+                    <li><a href="/config"><span class="glyphicon glyphicon-cog pull-right"></span>设置</a></li>
+                </ul>
+            </li>
+        </ul>
         <form method="GET" action="/" class="navbar-form navbar-right">
             <div class="form-group">
                 <label class="control-label">分类:</label>

@@ -1,8 +1,8 @@
 {% import const %}
 <tr data-id="{{ product.id }}" data-url="/product/{{product.id}}">
-    <th class="deletable disselectable">{{ index }}</th>
+    <th class="deletable disselectable">{{ index }}<span class="glyphicon glyphicon-trash"></span></th>
     <td><a href="http://detail.1688.com/offer/{{product.offer_id}}.html" target="_blank"><img src="/media/img/product/{{ product.offer_id }}.jpg" /></a></td>
-    <td>{{ product.subject or '' }}</td>
+    <td><a href="/product/{{ product.id }}" target="_blank" style="color: black">{{ product.subject or '' }}</a></td>
     <td class="editable selectable" role="category">{{ product.category or '' }}</td>
     <td>{{ product.code or '' }}</td>
     <td>{{ product.brand or ''}}</td>

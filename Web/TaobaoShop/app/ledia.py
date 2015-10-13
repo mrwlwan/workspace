@@ -110,7 +110,7 @@ class ShopHandler(FetchHandler):
             return 2
         if commit: self.db.commit()
         print('%s updated!' % product.offer_id)
-        return result
+        return 1
 
     def init(self):
         """ 初始化数据库. """
@@ -121,7 +121,8 @@ class ShopHandler(FetchHandler):
             commit_count_temp += 1
             if commit_count_temp % 20 == 0: self.db.commit()
         self.db.commit()
-        self.write('Init')
+        #self.write('Init')
+        self.redirect('/')
 
     def update(self):
         """ 抓取数据更新. """
@@ -130,10 +131,13 @@ class ShopHandler(FetchHandler):
         drop_products = []
         products_dict = dict(self.db.query(model.ProductModel.offer_id, model.ProductModel).all())
         for offer_id in self.fetch_offer_list():
+            print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+            print(offer_id)
             product = products_dict.get(offer_id)
             if not product:
                 product = self.add_product(offer_id)
-                if product: new_products.append(product)
+                if not product: continue
+                new_products.append(product)
             else:
                 products_dict.pop(offer_id)
                 temp = self.update_product(product)
@@ -156,7 +160,9 @@ class ShopHandler(FetchHandler):
             commit_count_temp += 1
             if commit_count_temp % 20 == 0: self.db.commit()
         self.db.commit()
-        self.write('Update done! %d found! %d droped!' % (len(new_products), len(drop_products)))
+        print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
+        print('Update done! %d found! %d droped!' % (len(new_products), len(drop_products)))
+        self.render('ledia/update.html', new_products=new_products, drop_products=drop_products)
 
     def get(self, action):
         getattr(self, action)()
@@ -194,6 +200,7 @@ class HomeHandler(base.BaseHandler):
             #else:
                 #query_columns = []
             #data = self.multi_columns_query(data, model.ProductModel, query_columns, keywords)
+        data = data.order_by(model.ProductModel.id.desc())
         sort_columns = self.get_argument('sort_columns', None)
         sort_columns_dict = dict(const.sort_columns_dict)
         if sort_columns and sort_columns in sort_columns_dict:
@@ -203,3 +210,7 @@ class HomeHandler(base.BaseHandler):
             data = data.order_by(columns_obj.desc() if desc else columns_obj)
         self.show_page('ledia/index.html', data, 20)
 
+
+class TestHandler(base.BaseHandler):
+    def get(self):
+        self.render('ledia/update.html', new_products=self.db.query(model.ProductModel).limit(3).all(), drop_products=self.db.query(model.ProductModel).limit(5).all())

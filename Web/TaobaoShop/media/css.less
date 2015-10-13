@@ -11,7 +11,38 @@
     }
 }
 
-
 td.editable {
     cursor: pointer;
+}
+
+
+.editable-table {
+    thead th.sortable {
+        .glyphicon-sort {
+            display: none;
+        }
+        &:hover {
+            .glyphicon-sort {
+                display: inline;
+            }
+            .glyphicon-triangle-top, .glyphicon-triangle-bottom {
+                display: none
+            }
+        }
+    }
+    tbody th {
+        .glyphicon {
+            display: none;
+        }
+        &:hover .glyphicon {
+            display: block;
+        }
+    }
+}
+
+.dropdown:hover {
+    background-color: #E7E7E7;
+    .dropdown-menu {
+        display: block;
+    }
 }

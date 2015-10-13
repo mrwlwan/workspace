@@ -7,7 +7,7 @@
             {% set desc =handler.get_query_argument('desc', None) %}
             {% set sort_items = [('标题', 180), ('分类', 70), ('货号', 70), ('品牌', 70), ('图案', 70), ('面料', 80), ('成分', 80), ('含量', 70), ('库存', 70), ('销量', 70), ('状态', 70)] %}
             {% for item in sort_items %}
-            <th class="sortable disselectable" style="width:{{ item[1] }}px">{{ item[0] }}<span class="glyphicon {{ sort_columns==item[0] and (desc and 'glyphicon-triangle-bottom' or 'glyphicon-triangle-top') or '' }}"</span></th>
+            <th class="sortable disselectable" style="width:{{ item[1] }}px">{{ item[0] }}<span class="glyphicon {{ sort_columns==item[0] and (desc and 'glyphicon-triangle-bottom' or 'glyphicon-triangle-top') or '' }}"></span><span class="glyphicon glyphicon-sort"></span></th>
             {% end %}
             <th class="disselectable">备注</th>
         </tr>

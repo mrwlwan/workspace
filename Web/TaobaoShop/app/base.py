@@ -91,25 +91,26 @@ class FetchHelper:
         while 1:
             try:
                 product_page = requests.get(self.PRODUCT_URL.format(offer_id=offer_id)).text
-                if product_page: break
+
+                detail_search = self.DETAIL_RE.search(product_page)
+                data = json.loads(detail_search.group(1))
+                if data.get('priceDisplay') != None:
+                    data['priceDisplay'] = float(data.get('priceDisplay'))
+                data['productFeatureList'] = dict(((i['name'], i['value']) for i in data['productFeatureList']))
+                if data['productFeatureList'].get('主面料成分的含量') != None:
+                    data['productFeatureList']['主面料成分的含量'] = float(data['productFeatureList']['主面料成分的含量'])
+                temp = []
+                for name in data['skuMap'] or []:
+                    item = data['skuMap'][name]
+                    item.update(zip(['color', 'size'], name.split('&gt;')))
+                    for key, data_type in (('canBookCount', int), ('discountPrice', float), ('saleCount', int)):
+                        if key in item and item[key] != None:
+                            item[key] = data_type(item[key])
+                    temp.append(item)
+                data['skuMap'] = temp
+                if data: break
             except:
                 print('Error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-        detail_search = self.DETAIL_RE.search(product_page)
-        data = json.loads(detail_search.group(1))
-        if data.get('priceDisplay') != None:
-            data['priceDisplay'] = float(data.get('priceDisplay'))
-        data['productFeatureList'] = dict(((i['name'], i['value']) for i in data['productFeatureList']))
-        if data['productFeatureList'].get('主面料成分的含量') != None:
-            data['productFeatureList']['主面料成分的含量'] = float(data['productFeatureList']['主面料成分的含量'])
-        temp = []
-        for name in data['skuMap'] or []:
-            item = data['skuMap'][name]
-            item.update(zip(['color', 'size'], name.split('&gt;')))
-            for key, data_type in (('canBookCount', int), ('discountPrice', float), ('saleCount', int)):
-                if key in item and item[key] != None:
-                    item[key] = data_type(item[key])
-            temp.append(item)
-        data['skuMap'] = temp
         return data
 
     def thumb(self, url, size=100):
