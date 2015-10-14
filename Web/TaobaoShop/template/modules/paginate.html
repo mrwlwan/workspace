@@ -13,6 +13,6 @@
         <li{% if page>=max_page %} class="disabled"{% end %}>
             <a href="{{ sub_path }}&page={{ min(page+1, max_page) }}">下一页</a>
         </li>
-        <li><a><b>{{ min(page*20, count) }}/{{ count }}</b></a></li>
+        <li><a><b>{{ min(page*per_page, count) }}/{{ count }}</b></a></li>
     </ul>
 </nav>

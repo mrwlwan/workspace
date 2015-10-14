@@ -8,8 +8,9 @@ from sqlalchemy.orm import sessionmaker, relationship
 import datetime, collections, re, json
 
 
-engine = create_engine('sqlite:///data.sqlite', echo=True)
+engine = create_engine('sqlite:///data.sqlite', echo=False)
 Base = declarative_base()
+
 
 
 class ConfigModel(Base):
@@ -17,11 +18,15 @@ class ConfigModel(Base):
     __tablename__ = 'configs'
     id = Column(Integer, primary_key=True)
     shop_name = Column(String, nullable=False)
-    update_date = Column(Date, default=datetime.date.today)
+    per_page = Column(Integer, default=20)
+    expiry_days = Column(Integer, default=1)
+    update_date = Column(Date, nullable=True)
 
     def is_expiries(self):
-        return (datetime.date.today()-self.update_date).days>=1
+        return (datetime.date.today()-self.update_date).days>=self.expiry_days
 
+    def get(self, column, default=None):
+        return getattr(self, column) if hasattr(self, column) else default
 
 
 class ProductModel(Base):
@@ -112,8 +117,8 @@ class ProductModel(Base):
         return sorted(self.skus, key=_sku_sort)
 
     # 判断是否过期需要重新更新
-    def is_expiries(self):
-        return (datetime.date.today()-self.update_date).days>=1
+    def is_expiries(self, days):
+        return (datetime.date.today()-self.update_date).days>=days
 
     def get_prices(self):
         return json.loads(self.price)

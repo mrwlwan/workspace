@@ -14,6 +14,7 @@ class Application(tornado.web.Application):
         handlers = [
             (r'/test', ledia.TestHandler),
             (r'/', ledia.HomeHandler),
+            (r'/config', ledia.ConfigHandler),
             (r'/shop/(init|update)', ledia.ShopHandler),
             (r'/product/(\d+)', ledia.ProductHandler),
             (r'/media/(.+)', tornado.web.StaticFileHandler, {'path': 'media/'}),

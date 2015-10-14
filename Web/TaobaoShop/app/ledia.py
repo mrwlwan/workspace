@@ -10,7 +10,7 @@ import re, json, os, sys, datetime
 import itertools
 
 
-class FetchHandler(base.BaseHandler, base.FetchHelper):
+class FetchDataHelper(base.FetchHelper):
     """ 抓取外部数据. """
     def fetch_product(self, offer_id, data=None, raw=False):
         """ 抓取product数据. """
@@ -44,7 +44,7 @@ class FetchHandler(base.BaseHandler, base.FetchHelper):
         return raw and skus or [model.SkuModel(**sku) for sku in skus]
 
 
-class ProductHandler(base.BaseHandler):
+class ProductHandler(base.BaseHelper):
     def get(self, product_id):
         product = self.db.query(model.ProductModel).filter_by(id=product_id).first()
         product and self.render('ledia/product.html', product=product)
@@ -64,13 +64,15 @@ class ProductHandler(base.BaseHandler):
             print(product)
             self.db.delete(product)
         self.db.commit()
+        os.remove(os.path.join('media/img/product/', product.offer_id, '.jpg'))
         self.write({'error': '', 'data': product_id})
 
 
-class ShopHandler(FetchHandler):
+class ShopHandler(FetchDataHelper):
     def initialize(self):
         super().initialize()
         self.today = datetime.date.today()
+        self.config = self.db.query(model.ConfigModel).first()
 
     def add_product(self, offer_id, data=None, commit=False):
         data = data or self.fetch_offer_dict(offer_id)
@@ -89,7 +91,7 @@ class ShopHandler(FetchHandler):
         return product
 
     def update_product(self, product, data=None, commit=False):
-        if not product.is_expiries(): # 更新时间限制
+        if not product.is_expiries(self.config.expiry_days): # 更新时间限制
             print('%s not expired!' % product.offer_id)
             return 0
         data = data or self.fetch_offer_dict(product.offer_id)
@@ -98,11 +100,14 @@ class ShopHandler(FetchHandler):
             if commit: self.db.commit()
             print('%s droped!' % product.offer_id)
             return -1
+        old_img_url = product.img_url
         self.update_obj(product, self.fetch_product(product.offer_id, data=data, raw=True))
         self.delete_objs(product.skus)
+        new_img_url = product.img_url
         product.skus = self.fetch_skus(data=data)
         product.update_sku_relative()
         product.update_date = self.today
+        if new_img_url!=old_img_url: self.save_img(self.thumb(new_img_url), product.offer_id)
         if product.status=='回收站':
             product.status='上架'
             if commit: self.db.commit()
@@ -126,6 +131,8 @@ class ShopHandler(FetchHandler):
 
     def update(self):
         """ 抓取数据更新. """
+        if not self.config.is_expiries():
+            return self.write('上次更新时间是 %s, %d内只能更新一次.' % (self.config.update_date, self.config.expiry_days))
         commit_count_temp = 0
         new_products = []
         drop_products = []
@@ -166,9 +173,11 @@ class ShopHandler(FetchHandler):
 
     def get(self, action):
         getattr(self, action)()
+        self.config.update_date = self.today
+        self.db.commit()
 
 
-class HomeHandler(base.BaseHandler):
+class HomeHandler(base.BaseHelper):
     def get(self):
         filter_certains = {}
         for arg in ('category', 'sku_status', 'status'):
@@ -200,7 +209,6 @@ class HomeHandler(base.BaseHandler):
             #else:
                 #query_columns = []
             #data = self.multi_columns_query(data, model.ProductModel, query_columns, keywords)
-        data = data.order_by(model.ProductModel.id.desc())
         sort_columns = self.get_argument('sort_columns', None)
         sort_columns_dict = dict(const.sort_columns_dict)
         if sort_columns and sort_columns in sort_columns_dict:
@@ -208,9 +216,31 @@ class HomeHandler(base.BaseHandler):
             desc = self.get_argument('desc', None)
             columns_obj = getattr(model.ProductModel, columns)
             data = data.order_by(columns_obj.desc() if desc else columns_obj)
-        self.show_page('ledia/index.html', data, 20)
+        else:
+            data = data.order_by(model.ProductModel.id.desc())
+        config = self.db.query(model.ConfigModel).first()
+        self.show_page('ledia/index.html', data, config.per_page)
 
 
-class TestHandler(base.BaseHandler):
+class ConfigHandler(base.BaseHelper):
+    def get(self):
+        config = self.db.query(model.ConfigModel).first()
+        self.render('ledia/config.html', config=config or {})
+
+    def post(self):
+        config_id = self.get_argument('id', None)
+        config = self.db.query(model.ConfigModel).first() if config_id else model.ConfigModel()
+        for key in self.request.arguments:
+            if key!='id' and hasattr(config, key):
+                value = self.get_argument(key, None)
+                if key=='update_date' and value: value = datetime.datetime.strptime(value, '%Y-%m-%d').date()
+                setattr(config, key, value or None)
+        not config_id and self.db.add(config)
+        self.db.commit()
+        self.redirect('/config')
+
+
+
+class TestHandler(base.BaseHelper):
     def get(self):
         self.render('ledia/update.html', new_products=self.db.query(model.ProductModel).limit(3).all(), drop_products=self.db.query(model.ProductModel).limit(5).all())

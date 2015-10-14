@@ -1,11 +1,12 @@
 # coding=utf8
 
+import model
 from sqlalchemy import or_
 import tornado.web
 import requests
 import re, json, os
 
-class BaseHandler(tornado.web.RequestHandler):
+class BaseHelper(tornado.web.RequestHandler):
     #_cache_query_all = {}
 
     def initialize(self):
@@ -62,28 +63,31 @@ class BaseHandler(tornado.web.RequestHandler):
         count = query.count()
         if count and page>count:
             return
-        self.render(template, *args, data=query.offset(start_index).limit(per_page), page=page, max_page=count//per_page+1, start_index=start_index+1, count=count, **kwargs)
+        self.render(template, *args, data=query.offset(start_index).limit(per_page), page=page, max_page=count//per_page+1, start_index=start_index+1, count=count, per_page=per_page, **kwargs)
 
 
-class FetchHelper:
-    LIST_INDEX_URL = 'http://benf6.1688.com/page/offerlist.htm'
-    LIST_URL = 'http://benf6.1688.com/page/offerlist.htm?showType=catalog&tradenumFilter=false&sampleFilter=false&mixFilter=false&privateFilter=false&mobileOfferFilter=%24mobileOfferFilter&groupFilter=false&sortType=timedown&pageNum={page}'
+class FetchHelper(BaseHelper):
+    LIST_INDEX_URL = 'http://{shop_name}.1688.com/page/offerlist.htm'
+    LIST_URL = 'http://{shop_name}.1688.com/page/offerlist.htm?showType=catalog&tradenumFilter=false&sampleFilter=false&mixFilter=false&privateFilter=false&mobileOfferFilter=%24mobileOfferFilter&groupFilter=false&sortType=timedown&pageNum={page}'
     PRODUCT_URL = 'http://m.1688.com/offer/{offer_id}.html'
     MAX_PAGE_RE = re.compile(r'<li>共<em class="page-count">(\d+)', re.S)
     PRODUCT_RE = re.compile(r'<a href="http://detail.1688.com/offer/([^\.]+)[^>]+>\s+<img src="[^"]+" alt="[^"]+"\s+/>', re.S)
     DETAIL_RE = re.compile(r'<script>window\.wingxViewData=window\.wingxViewData\|\|\{\};window\.wingxViewData\[0\]=(.+?)(?=</script></div></div>)', re.S)
 
     def fetch_offer_list(self):
+        config = self.db.query(model.ConfigModel).first()
+        list_index_url = self.LIST_INDEX_URL.format(shop_name=config.shop_name)
+        list_url = self.LIST_URL.format(shop_name=config.shop_name)
         while 1:
             try:
-                list_page = requests.get(self.LIST_INDEX_URL).text
+                list_page = requests.get(list_index_url).text
                 if list_page: break
             except:
                 print('Error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         pages = int(self.MAX_PAGE_RE.search(list_page).group(1))
         for page in range(1, pages+1):
             print('第%d页' % page)
-            list_page = requests.get(self.LIST_URL.format(page=page)).text
+            list_page = requests.get(list_url).text
             for product_search in self.PRODUCT_RE.finditer(list_page):
                 yield product_search.group(1)
 
