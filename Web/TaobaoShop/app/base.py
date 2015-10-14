@@ -77,7 +77,6 @@ class FetchHelper(BaseHelper):
     def fetch_offer_list(self):
         config = self.db.query(model.ConfigModel).first()
         list_index_url = self.LIST_INDEX_URL.format(shop_name=config.shop_name)
-        list_url = self.LIST_URL.format(shop_name=config.shop_name)
         while 1:
             try:
                 list_page = requests.get(list_index_url).text
@@ -87,7 +86,7 @@ class FetchHelper(BaseHelper):
         pages = int(self.MAX_PAGE_RE.search(list_page).group(1))
         for page in range(1, pages+1):
             print('第%d页' % page)
-            list_page = requests.get(list_url).text
+            list_page = requests.get(self.LIST_URL.format(shop_name=config.shop_name, page=page)).text
             for product_search in self.PRODUCT_RE.finditer(list_page):
                 yield product_search.group(1)
 
@@ -99,7 +98,7 @@ class FetchHelper(BaseHelper):
                 detail_search = self.DETAIL_RE.search(product_page)
                 data = json.loads(detail_search.group(1))
                 if data.get('priceDisplay') != None:
-                    data['priceDisplay'] = float(data.get('priceDisplay'))
+                    data['priceDisplay'] = float(data.get('priceDisplay').split('-')[0])
                 data['productFeatureList'] = dict(((i['name'], i['value']) for i in data['productFeatureList']))
                 if data['productFeatureList'].get('主面料成分的含量') != None:
                     data['productFeatureList']['主面料成分的含量'] = float(data['productFeatureList']['主面料成分的含量'])
