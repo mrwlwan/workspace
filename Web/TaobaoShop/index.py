@@ -15,6 +15,7 @@ class Application(tornado.web.Application):
             (r'/test', ledia.TestHandler),
             (r'/', ledia.HomeHandler),
             (r'/config', ledia.ConfigHandler),
+            (r'/backup/?', ledia.BackupHandler),
             (r'/shop/(init|update)', ledia.ShopHandler),
             (r'/product/(\d+)', ledia.ProductHandler),
             (r'/media/(.+)', tornado.web.StaticFileHandler, {'path': 'media/'}),

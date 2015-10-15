@@ -9,33 +9,33 @@
         <div class="col-md-12">
             <form class="form-horizontal" method="POST" action="/config" autocomplete="off">
                 <input name="id" type="hidden" value="{{config.get('id', '')}}">
+                {% set items = [
+                    {'label': '店铺名称', 'name': 'shop_name', 'default': ''},
+                    {'label': '每页项数', 'name': 'per_page', 'default': 20, 'type': 'number'},
+                    {'label': '库存紧张', 'name': 'urgent_threshold', 'default': 30, 'type': 'number'},
+                    {'label': '更新间隔', 'name': 'expiry_days', 'default': 1, 'type': 'number', 'suffix': '天'},
+                    {'label': '更新日期', 'name': 'update_date', 'default': '', 'type': 'date'},
+                ] %}
+                {% for item in items %}
                 <div class="form-group">
-                    <label class="control-label col-md-1">店铺名称</label>
+                    <label class="control-label col-md-1">{{item.get('label')}}</label>
                     <div class="col-md-11">
-                        <input name="shop_name" type="text" class="form-control" placeholder="店铺名称" value="{{config.get('shop_name') or ''}}">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="control-label col-md-1">每页项数</label>
-                    <div class="col-md-11">
-                        <input name="per_page" type="text" class="form-control" placeholder="每页项数" value="{{config.get('per_page') or 20}}">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="control-label col-md-1">更新间隔</label>
-                    <div class="col-md-11">
+                        {% if item.get('prefix') or item.get('suffix') %}
                         <div class="input-group">
-                            <input name="expiry_days" type="text" class="form-control" placeholder="每页项数" value="{{config.get('expiry_days') or 1}}">
-                            <div class="input-group-addon">天</div>
+                        {% end %}
+                            {% if item.get('prefix') %}
+                            <div class="input-group-addon">{{item.get('prefix')}}</div>
+                            {% end %}
+                            <input name="{{item.get('name')}}" type="{{item.get('type', 'text')}}" class="form-control" placeholder="{{item.get('label')}}" value="{{config.get(item.get('name')) or item.get('default') or ''}}">
+                            {% if item.get('suffix') %}
+                            <div class="input-group-addon">{{item.get('suffix')}}</div>
+                            {% end %}
+                        {% if item.get('prefix') or item.get('suffix') %}
                         </div>
+                        {% end %}
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="control-label col-md-1">更新日期</label>
-                    <div class="col-md-11">
-                        <input name="update_date" type="date" class="form-control" placeholder="更新日期" value="{{config.get('update_date') or ''}}">
-                    </div>
-                </div>
+                {% end %}
                 <div class="form-group">
                     <div class="col-md-offset-1 col-md-11">
                         <button type="reset" class="btn btn-warning">重置</button>

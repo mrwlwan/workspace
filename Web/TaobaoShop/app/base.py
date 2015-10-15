@@ -4,7 +4,7 @@ import model
 from sqlalchemy import or_
 import tornado.web
 import requests
-import re, json, os
+import re, json, os, traceback
 
 class BaseHelper(tornado.web.RequestHandler):
     #_cache_query_all = {}
@@ -82,7 +82,8 @@ class FetchHelper(BaseHelper):
                 list_page = requests.get(list_index_url).text
                 if list_page: break
             except:
-                print('Error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print('Fetch offer list error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                traceback.print_last()
         pages = int(self.MAX_PAGE_RE.search(list_page).group(1))
         for page in range(1, pages+1):
             print('第%d页' % page)
@@ -113,7 +114,8 @@ class FetchHelper(BaseHelper):
                 data['skuMap'] = temp
                 if data: break
             except:
-                print('Error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                print('Fetch offer dict error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+                traceback.print_last()
         return data
 
     def thumb(self, url, size=100):

@@ -1,5 +1,19 @@
 #coding=utf8
 
+# 默认值
+default_value = {
+    'category': '未分类',
+    'sku_status': '正常',
+    'status': '上架',
+    'per_page': 20,
+    'urgent_threshold': 30,
+    'expiry_days': 1,
+    'good_sale_threshold': 10, #销售好评销售量
+}
+
+# 尺码排序
+size_order = {'xs': 0, 's': 1, 'm': 2, 'l': 3, 'xl': 4, 'xxl': 5, 'xxxl': 6, 'xxxxl': 7}
+
 # 分类名称
 category_list = ('未分类', '夏装', '春秋冬装', '饰品', '邮费', '其它')
 

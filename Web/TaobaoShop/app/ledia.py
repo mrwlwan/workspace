@@ -119,12 +119,13 @@ class ShopHandler(FetchDataHelper):
 
     def init(self):
         """ 初始化数据库. """
-        if self.db.query(model.ProductModel).count(): return self.write('Delete database and try again!') #只作首次运行
+        if self.db.query(model.ProductModel).count(): return self.write('请删除数据库后再试!') #只作首次运行
         commit_count_temp = 0
         for offer_id in self.fetch_offer_list():
             self.add_product(offer_id)
             commit_count_temp += 1
             if commit_count_temp % 20 == 0: self.db.commit()
+        self.config.update_date = self.today
         self.db.commit()
         #self.write('Init')
         self.redirect('/')
@@ -132,7 +133,7 @@ class ShopHandler(FetchDataHelper):
     def update(self):
         """ 抓取数据更新. """
         if not self.config.is_expiries():
-            return self.write('上次更新时间是 %s, %d内只能更新一次.' % (self.config.update_date, self.config.expiry_days))
+            return self.write('上次更新时间是 %s, %d天内只能更新一次.' % (self.config.update_date, self.config.expiry_days))
         commit_count_temp = 0
         new_products = []
         drop_products = []
@@ -166,6 +167,7 @@ class ShopHandler(FetchDataHelper):
                 new_products.append(product)
             commit_count_temp += 1
             if commit_count_temp % 20 == 0: self.db.commit()
+        self.config.update_date = self.today
         self.db.commit()
         print('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
         print('Update done! %d found! %d droped!' % (len(new_products), len(drop_products)))
@@ -173,8 +175,6 @@ class ShopHandler(FetchDataHelper):
 
     def get(self, action):
         getattr(self, action)()
-        self.config.update_date = self.today
-        self.db.commit()
 
 
 class HomeHandler(base.BaseHelper):
@@ -239,8 +239,53 @@ class ConfigHandler(base.BaseHelper):
         self.db.commit()
         self.redirect('/config')
 
+class BackupHandler(base.BaseHelper):
+    def get(self):
+        self.render('ledia/backup.html', backups=os.listdir('media/backup'))
+
+    def post(self):
+        print('create')
+        target = 'backup-' + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d_%H%M%S%f')
+        with open('media/backup/'+target+'.bak', 'w') as f:
+            products = {}
+            columns = ('category', 'status', 'remarks')
+            for product in self.db.query(model.ProductModel):
+                obj = {}
+                for column in columns:
+                    obj[column] = getattr(product, column)
+                products[product.id] = obj
+            json.dump(products, f)
+            return self.write({'error': None, 'data': target})
+        return self.write({'error': True})
+
+    def put(self):
+        print('import')
+        target = self.get_argument('backup', None)
+        if not target: return self.write({'error': True})
+        with open('media/backup/'+target+'.bak') as f:
+            products_dict = json.load(f)
+            for product in self.db.query(model.ProductModel):
+                item = products_dict.get(str(product.id), {})
+                for key in item:
+                    setattr(product, key, item.get(key))
+            self.db.commit()
+        self.write({'error': None})
+
+    def delete(self):
+        print('delete')
+        print(self.request.arguments)
+        target = self.get_argument('backup', None)
+        target = target and 'media/backup/' + target +'.bak'
+        print(target)
+        if target and os.path.exists(target):
+            os.remove(target)
+        self.write({'error': None})
 
 
 class TestHandler(base.BaseHelper):
     def get(self):
-        self.render('ledia/update.html', new_products=self.db.query(model.ProductModel).limit(3).all(), drop_products=self.db.query(model.ProductModel).limit(5).all())
+        print('********************************')
+        print('test')
+        self.write('test')
+        self.db.query(model.ConfigModel).first().update_date = datetime.date.today()
+        self.db.commit()

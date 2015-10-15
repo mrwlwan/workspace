@@ -1,0 +1,28 @@
+{% extends "../base.html" %}
+
+{% block body_content %}
+<div class="container-fluid" style="margin-top:20px;">
+    <div class="row">
+        <div class="col-md-12">
+            <form action="/backup" method="POST" class="backup-create">
+                <button class="btn btn-default" style="margin-bottom:20px;">添加备份</button>
+            </form>
+        </div>
+        <div class="col-md-5">
+            <ul class="list-group backup-list" data-url="/backup">
+                {% for backup in backups %}
+                <li class="list-group-item">
+                    <span class="backup-value">{{backup.rsplit('.bak', 1)[0]}}</span>
+                    <span class="pull-right glyphicon glyphicon-remove" style="margin-left:10px" title="删除"></span>
+                    <span class="pull-right glyphicon glyphicon-import" title="导入"></span>
+                </li>
+                {% end %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% end %}
+
+{% block script %}
+<script src="/media/backup.js"></script>
+{% end %}

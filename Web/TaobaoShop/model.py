@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 import datetime, collections, re, json
 
 
-engine = create_engine('sqlite:///data.sqlite', echo=False)
+engine = create_engine('sqlite:///data.sqlite', echo=True)
 Base = declarative_base()
 
 
@@ -18,8 +18,9 @@ class ConfigModel(Base):
     __tablename__ = 'configs'
     id = Column(Integer, primary_key=True)
     shop_name = Column(String, nullable=False)
-    per_page = Column(Integer, default=20)
-    expiry_days = Column(Integer, default=1)
+    per_page = Column(Integer, default=const.default_value.get('per_page'))
+    urgent_threshold = Column(Integer, default=const.default_value.get('urgent_threshold'))
+    expiry_days = Column(Integer, default=const.default_value.get('expiry_days'))
     update_date = Column(Date, nullable=True)
 
     def is_expiries(self):
@@ -69,11 +70,11 @@ class ProductModel(Base):
     # 上次更新日期
     last_update_date = Column(Date)
     # 分类
-    category = Column(Enum(*const.category_list), default='未分类', nullable=False)
+    category = Column(Enum(*const.category_list), default=const.default_value.get('category'), nullable=False)
     # 库存状态
-    sku_status = Column(Enum(*const.sku_status_list), default='正常', nullable=False)
+    sku_status = Column(Enum(*const.sku_status_list), default=const.default_value.get('sku_status'), nullable=False)
     # 销售状态
-    status = Column(Enum(*const.status_list), default='上架', nullable=False)
+    status = Column(Enum(*const.status_list), default=const.default_value.get('status'), nullable=False)
     # SKU(码数和数量)
     skus = relationship('SkuModel', backref='product', cascade='all', single_parent=True)
 
@@ -106,7 +107,7 @@ class ProductModel(Base):
 
 
     def ordered_skus_by_size(self):
-        order = {'xs': 0, 's': 1, 'm': 2, 'l': 3, 'xl': 4, 'xxl': 5, 'xxxl': 6, 'xxxxl': 7}
+        order = const.size_order
         reg = re.compile(r'x*[sl]|m')
         def _sku_sort(sku):
             size = sku.size.lower()
@@ -145,8 +146,9 @@ class ProductModel(Base):
         elif zero_count>0:
             self.sku_status = '缺货'
         else:
+            config = session.query(ConfigModel).first()
             for book_count in book_counts:
-                if book_count<30:
+                if book_count<=config.urgent_threshold:
                     self.sku_status = '紧张'
                     return
             self.sku_status = '正常'
