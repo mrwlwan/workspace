@@ -1,14 +1,16 @@
 window.addEvent('domready', function(){
     var form_create = document.getElement('.backup-create')
-    form_create.getElement('button').addEvent('click', function(e){
+    form_create.addEvent('click:relay(button)', function(e, target){
         e.preventDefault()
-        form_create.set('send', {
+        new Request({
+            url: form_create.get('action'),
+            method: 'post',
+            data: 'backup='+target.get('name'),
             emulation: false,
             onSuccess: function(response){
                 location.reload()
             }
-        })
-        form_create.send()
+        }).send()
     })
 
     var backup_list = document.getElement('.backup-list')

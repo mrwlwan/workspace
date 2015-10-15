@@ -6,7 +6,7 @@ import model
 import sqlalchemy
 import tornado.web
 import requests
-import re, json, os, sys, datetime
+import re, json, os, sys, datetime, pickle
 import itertools
 
 
@@ -248,16 +248,17 @@ class BackupHandler(base.BaseHelper):
 
     def post(self):
         print('create')
-        target = 'backup-' + datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d_%H%M%S%f')
-        with open('media/backup/'+target+'.bak', 'w') as f:
-            products = {}
-            columns = ('category', 'status', 'remarks')
-            for product in self.db.query(model.ProductModel):
-                obj = {}
-                for column in columns:
-                    obj[column] = getattr(product, column)
-                products[product.id] = obj
-            json.dump(products, f)
+        backup = self.get_argument('backup')
+        if backup not in ('configs', 'products'):
+            return self.write({'error': True})
+        target = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d_%H%M%S%f-'+backup)
+        with open('media/backup/'+target+'.bak', 'wb') as f:
+            backup_model = {'configs': model.ConfigModel, 'products': model.ProductModel}.get(backup)
+            columns = ('category', 'status', 'remarks') if backup=='products' else None
+            backup_dict = {}
+            for row in self.db.query(backup_model):
+                backup_dict[row.id] = self.model2dict(row, columns, ['id'])
+            pickle.dump({backup: backup_dict}, f)
             return self.write({'error': None, 'data': target})
         return self.write({'error': True})
 
@@ -265,18 +266,20 @@ class BackupHandler(base.BaseHelper):
         print('import')
         target = self.get_argument('backup', None)
         if not target: return self.write({'error': True})
-        with open('media/backup/'+target+'.bak') as f:
-            products_dict = json.load(f)
-            for product in self.db.query(model.ProductModel):
-                item = products_dict.get(str(product.id), {})
-                for key in item:
-                    setattr(product, key, item.get(key))
+        with open('media/backup/'+target+'.bak', 'rb') as f:
+            backup_dicts = pickle.load(f)
+            backup_models= {'configs': model.ConfigModel, 'products': model.ProductModel}
+            for backup in backup_dicts:
+                backup_dict = backup_dicts.get(backup)
+                backup_model = backup_models.get(backup)
+                for row in self.db.query(backup_model):
+                    for key, value in backup_dict.get(row.id, {}).items():
+                        setattr(row, key, value)
             self.db.commit()
         self.write({'error': None})
 
     def delete(self):
         print('delete')
-        print(self.request.arguments)
         target = self.get_argument('backup', None)
         target = target and 'media/backup/' + target +'.bak'
         print(target)

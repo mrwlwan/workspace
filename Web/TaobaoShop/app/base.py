@@ -26,6 +26,10 @@ class BaseHelper(tornado.web.RequestHandler):
             self.db.delete(obj)
         commit and self.db.commit()
 
+    def model2dict(self, model_obj, columns=None, ignore=[]):
+        columns = columns is None and (column.name for column in model_obj.__table__.columns if column not in ignore) or columns
+        return dict(((column, getattr(model_obj, column)) for column in columns))
+
     #def cache_query_all(self, model, certain={}):
         #if model in self._cache_query_all:
             #cache_certain = self._cache_query_all[model]['certain']
