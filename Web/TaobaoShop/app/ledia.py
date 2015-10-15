@@ -178,6 +178,10 @@ class ShopHandler(FetchDataHelper):
 
 
 class HomeHandler(base.BaseHelper):
+    def initialize(self):
+        super().initialize()
+        self.config = self.db.query(model.ConfigModel).first()
+
     def get(self):
         filter_certains = {}
         for arg in ('category', 'sku_status', 'status'):
@@ -218,8 +222,7 @@ class HomeHandler(base.BaseHelper):
             data = data.order_by(columns_obj.desc() if desc else columns_obj)
         else:
             data = data.order_by(model.ProductModel.id.desc())
-        config = self.db.query(model.ConfigModel).first()
-        self.show_page('ledia/index.html', data, config.per_page)
+        self.show_page('ledia/index.html', data, self.config.per_page)
 
 
 class ConfigHandler(base.BaseHelper):

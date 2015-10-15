@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 import datetime, collections, re, json
 
 
-engine = create_engine('sqlite:///data.sqlite', echo=True)
+engine = create_engine('sqlite:///data.sqlite', echo=False)
 Base = declarative_base()
 
 
@@ -20,6 +20,7 @@ class ConfigModel(Base):
     shop_name = Column(String, nullable=False)
     per_page = Column(Integer, default=const.default_value.get('per_page'))
     urgent_threshold = Column(Integer, default=const.default_value.get('urgent_threshold'))
+    good_sale_threshold = Column(Integer, default=const.default_value.get('good_sale_threshold'))
     expiry_days = Column(Integer, default=const.default_value.get('expiry_days'))
     update_date = Column(Date, nullable=True)
 

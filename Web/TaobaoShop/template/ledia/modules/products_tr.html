@@ -11,7 +11,7 @@
     <td>{{ product.fabric_content or '' }}</td>
     <td>{{ product.fabric_scale or ''}}</td>
     <td class="{{ const.color.get(product.sku_status, '') }}"><a href="/product/{{ product.id }}" target="_blank" style="color: black">{{ product.book_count or ''}}</a></td>
-    <td class="{{ product.sale_count_diff>=const.default_value.get('good_sale_threshold') and 'success' or '' }}"><a href="/product/{{ product.id }}" target="_blank" style="color: black">{{ product.sale_count_diff or '' }}</a></td>
+    <td class="{{ product.sale_count_diff>=handler.config.good_sale_threshold and 'success' or '' }}"><a href="/product/{{ product.id }}" target="_blank" style="color: black">{{ product.sale_count_diff or '' }}</a></td>
     <td class="{% if product.status!='回收站' %}editable selectable {% end %}{{const.color.get(product.status, '') }}" role="status">{{ product.status or ''}}</td>
     <td class="editable" role="remarks">{{ product.remarks or ''}}</td>
 </tr>

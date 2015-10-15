@@ -1,6 +1,7 @@
 {% extends "../base.html" %}
 
 {% block body_content %}
+{% import const %}
 <div class="container-fluid" style="margin-top:20px;">
     <div class="row">
         <div class="col-md-12">
@@ -11,9 +12,10 @@
                 <input name="id" type="hidden" value="{{config.get('id', '')}}">
                 {% set items = [
                     {'label': '店铺名称', 'name': 'shop_name', 'default': ''},
-                    {'label': '每页项数', 'name': 'per_page', 'default': 20, 'type': 'number'},
-                    {'label': '库存紧张', 'name': 'urgent_threshold', 'default': 30, 'type': 'number'},
-                    {'label': '更新间隔', 'name': 'expiry_days', 'default': 1, 'type': 'number', 'suffix': '天'},
+                    {'label': '每页项数', 'name': 'per_page', 'default': const.default_value.get('per_page'), 'type': 'number'},
+                    {'label': '库存紧张', 'name': 'urgent_threshold', 'default': const.default_value.get('urgent_threshold'), 'type': 'number'},
+                    {'label': '销售好评', 'name': 'good_sale_threshold', 'default': const.default_value.get('good_sale_threshold'), 'type': 'number'},
+                    {'label': '更新间隔', 'name': 'expiry_days', 'default': const.default_value.get('expiry_days'), 'type': 'number', 'suffix': '天'},
                     {'label': '更新日期', 'name': 'update_date', 'default': '', 'type': 'date'},
                 ] %}
                 {% for item in items %}
