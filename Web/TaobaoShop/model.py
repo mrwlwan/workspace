@@ -111,6 +111,7 @@ class ProductModel(Base):
         order = const.size_order
         reg = re.compile(r'x*[sl]|m')
         def _sku_sort(sku):
+            if not sku.size: return -1
             size = sku.size.lower()
             size_search = reg.search(size)
             if size_search:

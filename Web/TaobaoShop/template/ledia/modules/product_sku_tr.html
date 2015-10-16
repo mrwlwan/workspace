@@ -20,7 +20,7 @@
     <td rowspan={{len(sku[color])}}>{{color}}</td>
     {% set color_once = False %}
     {% end %}
-    <td>{{size}}</td>
+    <td>{{size or ''}}</td>
     <td>{{'%.2f' % sku[color][size]['price']}}</td>
     <td>{{sku[color][size]['book_count']}}</td>
     <td>{{sku[color][size]['sale_count']}}</td>
