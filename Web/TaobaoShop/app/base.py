@@ -87,7 +87,7 @@ class FetchHelper(BaseHelper):
                 if list_page: break
             except:
                 print('Fetch offer list error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                traceback.print_last()
+                traceback.print_exc()
         pages = int(self.MAX_PAGE_RE.search(list_page).group(1))
         for page in range(1, pages+1):
             print('第%d页' % page)
@@ -119,7 +119,7 @@ class FetchHelper(BaseHelper):
                 if data: break
             except:
                 print('Fetch offer dict error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-                traceback.print_last()
+                traceback.print_exc()
         return data
 
     def thumb(self, url, size=100):
