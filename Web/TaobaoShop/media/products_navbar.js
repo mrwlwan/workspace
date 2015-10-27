@@ -20,6 +20,7 @@ window.addEvent('domready', function(){
         var column = target.get('text')
         sort_select.getElements('option').some(function(item){
             if(item.get('text')!=column) return false
+            sort_select.focus()
             if(item.match(':selected')){
                 desc_checkbox.set('checked', !desc_checkbox.get('checked'))
             }else{
