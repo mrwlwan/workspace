@@ -7,6 +7,7 @@ default_value = {
     'status': '上架',
     'per_page': 20,
     'urgent_threshold': 30,
+    'normal_begin': 3,
     'expiry_days': 1,
     'good_sale_threshold': 10, #销售好评销售量
 }

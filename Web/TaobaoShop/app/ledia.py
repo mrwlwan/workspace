@@ -90,12 +90,12 @@ class ShopHandler(FetchDataHelper):
         print('%s added!' %offer_id)
         return product
 
-    def update_product(self, product, data=None, commit=False):
-        if not product.is_expiries(self.config.expiry_days): # 更新时间限制
+    def update_product(self, product, data=None, commit=False, force=False):
+        if not force and not product.is_expiries(self.config.expiry_days): # 更新时间限制
             print('%s not expired!' % product.offer_id)
             return 0
         data = data or self.fetch_offer_dict(product.offer_id)
-        if not data['productFeatureList'].get('货号'): # 回收站处理
+        if not data['productFeatureList'].get('货号') or not data['begin'] or data['begin']>self.config.normal_begin: # 回收站处理
             product.status = '回收站'
             if commit: self.db.commit()
             print('%s droped!' % product.offer_id)
@@ -132,7 +132,8 @@ class ShopHandler(FetchDataHelper):
 
     def update(self):
         """ 抓取数据更新. """
-        if not self.config.is_expiries():
+        force = self.get_argument('force', False)
+        if not force and not self.config.is_expiries():
             return self.write('上次更新时间是 %s, %d天内只能更新一次.' % (self.config.update_date, self.config.expiry_days))
         commit_count_temp = 0
         new_products = []
@@ -143,12 +144,12 @@ class ShopHandler(FetchDataHelper):
             print(offer_id)
             product = products_dict.get(offer_id)
             if not product:
-                product = self.add_product(offer_id)
+                product = self.add_product(offer_id, commit=True)
                 if not product: continue
                 new_products.append(product)
             else:
                 products_dict.pop(offer_id)
-                temp = self.update_product(product)
+                temp = self.update_product(product, force=force)
                 if temp==0:
                     continue
                 elif temp==-1:
@@ -183,6 +184,8 @@ class HomeHandler(base.BaseHelper):
         self.config = self.db.query(model.ConfigModel).first()
 
     def get(self):
+        if not self.config:
+            return self.redirect('/config')
         filter_certains = {}
         for arg in ('category', 'sku_status', 'status'):
             value = self.get_argument(arg, '全部')

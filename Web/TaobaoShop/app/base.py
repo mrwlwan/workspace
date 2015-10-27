@@ -102,6 +102,7 @@ class FetchHelper(BaseHelper):
 
                 detail_search = self.DETAIL_RE.search(product_page)
                 data = json.loads(detail_search.group(1))
+                data['begin']=max([int(item[0]) for item in data['skuPriceRanges']]) if data['skuPriceRanges'] else None
                 if data.get('priceDisplay') != None:
                     data['priceDisplay'] = float(data.get('priceDisplay').split('-')[0])
                 data['productFeatureList'] = dict(((i['name'], i['value']) for i in data['productFeatureList']))

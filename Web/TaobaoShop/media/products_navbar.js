@@ -9,6 +9,9 @@ window.addEvent('domready', function(){
         e.preventDefault()
         keywords_input.set('value', null)
     })
+    search_form.addEvent('keypress', function(e){
+        if(e.code==13) this.submit()
+    })
 
     var sort_select = products_navbar.getElement('select[name=sort_columns]')
     var desc_checkbox = products_navbar.getElement('input[name=desc]')

@@ -13,7 +13,7 @@
     <td rowspan={{rows_count}}><a href="http://detail.1688.com/offer/{{product.offer_id}}.html" target="_blank">{{ product.subject or '' }}</a></td>
     <td rowspan={{rows_count}}>{{ product.code or '' }}</td>
     <td rowspan={{rows_count}} role="category" class="editable selectable">{{ product.category or ''}}</td>
-    <td rowspan={{rows_count}} role="status" class="editable selectable">{{ product.status or ''}}</td>
+    <td rowspan={{rows_count}} role="status"{%if product.status!='回收站'%} class="editable selectable"{%end%}>{{ product.status or ''}}</td>
     <td rowspan={{rows_count}}>{{ product.update_date or '' }}</td>
     {% end %}
     {% if color_once %}

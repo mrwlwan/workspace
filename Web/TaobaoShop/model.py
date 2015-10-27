@@ -21,6 +21,8 @@ class ConfigModel(Base):
     per_page = Column(Integer, default=const.default_value.get('per_page'))
     urgent_threshold = Column(Integer, default=const.default_value.get('urgent_threshold'))
     good_sale_threshold = Column(Integer, default=const.default_value.get('good_sale_threshold'))
+    # 正常起批件数
+    normal_begin = Column(Integer, default=const.default_value.get('normal_begin'))
     expiry_days = Column(Integer, default=const.default_value.get('expiry_days'))
     update_date = Column(Date, nullable=True)
 
