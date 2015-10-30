@@ -23,8 +23,8 @@ class Application(tornado.web.Application):
             (r'/staticw/(.+)', tornado.web.StaticFileHandler, {'path': 'g:/workspace/Web/'}),
         ]
         settings = {
-            'debug': True,
-            'autoreload': True,
+            #'debug': True,
+            #'autoreload': True,
             'template_path': 'template',
         }
         super().__init__(handlers, **settings)
