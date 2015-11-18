@@ -5,16 +5,21 @@ import urllib.request, urllib.parse, re, json
 
 class Session:
     def __init__(self, cookiejar=None, headers=[], handlers=[]):
+        """ 初始化 Session 对象.
+        @cookiejar(http.cookiejar.CookieJar/str): str 时自动转换成 http.cookiejar.LWPCookieJar 对象.
+        @headers(2-tuples): 格式[(key, value), ...].
+        @handlers(list): 格式[handler1, ...]. 注意不要跟 default handlers 重复.
+        """
         # 默认添加 HTTPCookieProcessor
-        if not handlers or [True for handler in handlers if not isinstance(handler, urllib.request.HTTPCookieProcessor)]:
-            if cookiejar and isinstance(cookiejar, CookieJar):
-                self.cookiejar = cookiejar
-            else:
-                self.cookiejar = LWPCookieJar(cookiejar)
-                if cookiejar and os.path.exists(cookiejar): self.cookiejar.load()
-            handlers.append(urllib.request.HTTPCookieProcessor(self.cookiejar))
+        #if not handlers or [True for handler in handlers if not isinstance(handler, urllib.request.HTTPCookieProcessor)]:
+        if cookiejar and isinstance(cookiejar, CookieJar):
+            self.cookiejar = cookiejar
+        else:
+            self.cookiejar = LWPCookieJar(cookiejar)
+            if cookiejar and os.path.exists(cookiejar): self.cookiejar.load()
+        handlers.append(urllib.request.HTTPCookieProcessor(self.cookiejar))
         self.opener = urllib.request.build_opener(*handlers)
-        # 默认添加 HTTPCookieProcessor
+        # 默认添加 Firefox useragent.
         self.opener.addheaders = headers or [('User-agent', 'Mozilla/5.0 (Windows NT 5.1; rv:41.0) Gecko/20100101 Firefox/41.0')]
 
     def add_header(self, header):
@@ -24,6 +29,13 @@ class Session:
         self.opener.add_handler(handler)
 
     def request(self, url, params={}, data=None, method=None, headers=[], proxies=[], timeout=None, encoding='utf8', errors='strict', origin_req_host=None, unverifiable=False, **kwargs):
+        """ 通用 http 请求, 返回 ResponseProxy 对象.
+        @data(str/dict/2-tuples).
+        @method(str): GET/POST/PUT/OPTION/DELETE.
+        @headers(2-tuples): 格式[(key, value)].
+        @proxies(2-tuples): 模式[(ip1, 'http'), (ip2, 'https'), ...].
+        @kwargs: 传递给 self.opener.open 方法.
+        """
         if params:
             url = url+'?'+ urllib.parse.urlencode(params).encoding(encoding, errors)
         r = urllib.request.Request(
@@ -57,8 +69,8 @@ class Session:
 
 
 class ResponseProxy:
-    """ 保留关键属性: _encoding, _content """
     def __init__(self, response, request):
+        """ 保留关键属性: _encoding, _content """
         self.response = response
         self.request = request
 
@@ -88,7 +100,7 @@ class ResponseProxy:
 
     def get_json(self, default=None, encoding=None, errors='strict'):
         text = self.get_text(encoding, errors).strip()
-        return json.loads(text) if text else None
+        return json.loads(text) if text else default
 
     def get_header(self, key, default=None):
         return self.response.getheader(key, default)
