@@ -23,8 +23,8 @@ class Session:
         # 默认添加 Firefox useragent.
         self.opener.addheaders = headers or [('User-agent', 'Mozilla/5.0 (Windows NT 5.1; rv:42.0) Gecko/20100101 Firefox/42.0')]
 
-    def add_header(self, header):
-        self.opener.addheaders.append(header)
+    def add_header(self, key, value):
+        self.opener.addheaders.append((key, value))
 
     def add_handler(self, handler):
         self.opener.add_handler(handler)
