@@ -29,7 +29,7 @@ class Session:
     def add_handler(self, handler):
         self.opener.add_handler(handler)
 
-    def request(self, url, data=None, params={}, method=None, headers=[], proxies=[], timeout=None, encoding='utf8', errors='strict', doseq=False, safe='', origin_req_host=None, unverifiable=False, **kwargs):
+    def request(self, url, data=None, params=None, method=None, headers=None, proxies=None, timeout=None, encoding='utf8', errors='strict', doseq=False, safe='', origin_req_host=None, unverifiable=False, **kwargs):
         """ 通用 http 请求, 返回 ResponseProxy 对象.
         @params(dict/2-tuples): url queries.
         @data(str/dict/2-tuples).
@@ -49,10 +49,10 @@ class Session:
             origin_req_host=origin_req_host,
             unverifiable=unverifiable
         )
-        for header in headers:
-            r.add_header(*header)
-        for proxy in proxies:
-            r.set_proxy(*proxy)
+        if headers:
+            for header in headers: r.add_header(*header)
+        if proxies:
+            for proxy in proxies: r.set_proxy(*proxy)
         response = self.opener.open(r, timeout=timeout, **kwargs)
         return ResponseProxy(response, None)
 
