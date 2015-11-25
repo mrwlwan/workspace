@@ -1,7 +1,7 @@
 # coding=utf8
 
 import http.cookiejar
-import urllib.request, urllib.parse, re, json, os
+import urllib.request, urllib.parse, re, json, os, gzip
 
 class Session:
     def __init__(self, cookiejar=None, headers=None, handlers=None):
@@ -12,7 +12,7 @@ class Session:
         """
         self.opener = urllib.request.build_opener()
         # 默认添加 HTTPCookieProcessor
-        if cookiejar and isinstance(cookiejar, http.cookiejar.CookieJar):
+        if cookiejar is not None and isinstance(cookiejar, http.cookiejar.CookieJar):
             self.cookiejar = cookiejar
         else:
             self.cookiejar = http.cookiejar.LWPCookieJar(cookiejar)
@@ -54,7 +54,7 @@ class Session:
         if proxies:
             for proxy in proxies: r.set_proxy(*proxy)
         response = self.opener.open(r, timeout=timeout, **kwargs)
-        return ResponseProxy(response, None)
+        return ResponseProxy(response, r)
 
     def get(self, url, **kwargs):
         return self.request(url, method='GET', **kwargs)
@@ -96,7 +96,11 @@ class ResponseProxy:
     @property
     def content(self):
         if not hasattr(self, '_content'):
-            self._content= self.response.read()
+            is_gzip = self.get_header('Content-Encoding')
+            if is_gzip and is_gzip.strip().lower()=='gzip':
+                self._content = gzip.GzipFile(fileobj=self.response, mode='r').read()
+            else:
+                self._content= self.response.read()
         return self._content
 
     def get_text(self, encoding=None, errors='strict'):
