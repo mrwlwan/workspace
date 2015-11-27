@@ -4,69 +4,29 @@ import http.cookiejar
 import urllib.request, urllib.parse, re, json, os, gzip, ssl
 
 class Session:
-    def __init__(self, headers=None, handlers=None):
+    def __init__(self, cookiejar=True, context=None, headers=None, handlers=None):
         """ 初始化 Session 对象.
-        @cookiejar(http.cookiejar.CookieJar).
-        @context(ssl.SSLContext).
+        @cookiejar(http.cookiejar.CookieJar/str): str 时自动转换成 http.cookiejar.LWPCookieJar 对象.
         @headers(2-tuples): 格式[(key, value), ...].
         @handlers(list): 格式[handler1, ...]. 注意不要跟 default handlers 重复.
         """
-        self._cookie_handler = None
-        self._https_handler = None
         handlers_plus = []
-        if handlers:
-            for handler in handlers:
-                handlers_plus.append(handler)
-                if isinstance(handler, urllib.request.HTTPCookieProcessor):
-                    self._cookie_handler = handler
-                elif isinstance(handler, urllib.request.HTTPSHandler):
-                    self._https_handler = handler
-        if not self._cookie_handler:
-            self._cookie_handler = urllib.request.HTTPCookieProcessor()
-            handlers_plus.insert(0, self._cookie_handler)
-        if not self._https_handler:
-            self._https_handler = urllib.request.HTTPSHandler()
-            handlers_plus.insert(0, self._https_handler)
+        # 默认添加 HTTPCookieProcessor
+        self.cookiejar = cookiejar
+        if cookiejar:
+            if not isinstance(cookiejar, http.cookiejar.CookieJar):
+                string_like = isinstance(cookiejar, str)
+                self.cookiejar = http.cookiejar.LWPCookieJar(cookiejar if string_like else None)
+                if string_like and os.path.exists(cookiejar): self.cookiejar.load()
+            handlers_plus.append(urllib.request.HTTPCookieProcessor(self.cookiejar))
+        if context:
+            if not isinstance(context, ssl.SSLContext):
+                context = ssl._create_unverified_context()
+            handlers_plus.append(urllib.request.HTTPSHandler(context=context))
+        if handlers: handlers_plus += handlers
         self.opener = urllib.request.build_opener(*handlers_plus)
         # 默认添加 Firefox useragent.
         self.opener.addheaders = headers or [('User-agent', 'Mozilla/5.0 (Windows NT 5.1; rv:42.0) Gecko/20100101 Firefox/42.0')]
-
-    @property
-    def cookiejar(self):
-        return self._cookie_handler.cookiejar
-
-    @cookiejar.setter
-    def cookiejar(self, cookiejar):
-        self._cookie_handler.cookiejar = cookiejar
-
-    @property
-    def context(self):
-        return self._https_handler._context
-
-    @context.setter
-    def context(self, context):
-        self._https_handler._context = context
-
-    def load_filecookiejar(self, filename, style='lwp', **kwargs):
-        """ 加载文件型cookiejar.
-        @filename(str/None).
-        @style(str): lwp/moz.
-        """
-        style = style.lower()
-        if style=='lwp':
-            cls = http.cookiejar.LWPCookieJar
-        elif style=='moz':
-            cls = http.cookiejar.MozillaCookieJar
-        else: return False
-        self.cookiejar = cls(filename, **kwargs)
-        if filename and os.path.exists(filename): self.cookiejar.load()
-        return True
-
-    def set_unverify_context(self):
-        self.context = ssl._create_unverified_context()
-
-    def load_cafile(self, filename, **kwargs):
-        self.context = ssl.create_default_context(cafile=filename, **kwargs)
 
     def add_header(self, key, value):
         self.opener.addheaders.append((key, value))
@@ -160,14 +120,4 @@ class ResponseProxy:
 
 
 def urlopen(*args, context=None, **kwargs):
-    session = Session()
-    if context: session.context = context
-    return session.request(*args, **kwargs)
-
-
-def retrieve_cafile(hostname, port=443, saved='cacert.pem', **kwargs):
-    """ 取得网站 SSL 验证 cafile 文件. """
-    cert_string = ssl.get_server_certificate((hostname, port), **kwargs)
-    with open(saved, 'w', newline='\n'):
-        f.write(cert_string)
-
+    return Session(cookiejar=None, context=kwargs.get(context)).request(*args, **kwargs)
