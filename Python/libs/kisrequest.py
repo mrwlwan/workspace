@@ -65,8 +65,12 @@ class Session:
     def set_unverify_context(self):
         self.context = ssl._create_unverified_context()
 
-    def load_cafile(self, filename, **kwargs):
-        self.context = ssl.create_default_context(cafile=filename, **kwargs)
+    #def load_cafile(self, filename, **kwargs):
+        ##self.context = ssl.create_default_context(cafile=filename, **kwargs)
+        #self.context.load_verify_locations(cafile=filename, **kwargs)
+
+    def load_verify_locations(cafile=None, capath=None, cadata=None):
+        self.context.load_verify_locations(cafile=filename, **kwargs)
 
     def add_header(self, key, value):
         self.opener.addheaders.append((key, value))
@@ -165,9 +169,28 @@ def urlopen(*args, context=None, **kwargs):
     return session.request(*args, **kwargs)
 
 
-def retrieve_cafile(hostname, port=443, saved='cacert.pem', **kwargs):
+def retrieve_cacert(hostname, port=443, saved=None, **kwargs):
     """ 取得网站 SSL 验证 cafile 文件. """
     cert_string = ssl.get_server_certificate((hostname, port), **kwargs)
+    if not saved: return cert_string
     with open(saved, 'w', newline='\n'):
         f.write(cert_string)
 
+
+def fix_cookiefile(cookie_filename):
+    """ fix ie style cookie file to netscape style. """
+    lines = []
+    correct = False
+    reg = re.compile(r'^\s*#+\s*Netscape\s+HTTP\s+Cookie\s+File\s*$', re.I)
+    with open(cookie_filename, encoding='utf8') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                if reg.match(line):
+                    correct = True
+                    break
+                lines.append(line)
+    if not correct:
+        lines.insert(0, '# Netscape HTTP Cookie File')
+        with open(cookie_filename, 'w', encoding='utf8') as f:
+            f.write('\n'.join(lines))
