@@ -62,15 +62,16 @@ class Session:
         if filename and os.path.exists(filename): self.cookiejar.load()
         return True
 
-    def set_unverify_context(self):
-        self.context = ssl._create_unverified_context()
+    def set_default_context(self, cafile=None, capath=None, cadata=None, **kwargs):
+        if not (cafile or capath or cadata):
+            cafile = os.path.join(os.path.dirname(__file__), 'cacert.pem')
+        self.context = ssl.create_default_context(cafile=cafile, capath=capath, cadata=cadata, **kwargs)
 
-    #def load_cafile(self, filename, **kwargs):
-        ##self.context = ssl.create_default_context(cafile=filename, **kwargs)
-        #self.context.load_verify_locations(cafile=filename, **kwargs)
+    def set_unverify_context(self, *args, **kwargs):
+        self.context = ssl._create_unverified_context(*args, **kwargs)
 
-    def load_verify_locations(cafile=None, capath=None, cadata=None):
-        self.context.load_verify_locations(cafile=filename, **kwargs)
+    def load_context(self, cafile=None, capath=None, cadata=None, **kwargs):
+        self.context.load_verify_locations(cafile=cafile, capath=capath, cadata=cadata, **kwargs)
 
     def add_header(self, key, value):
         self.opener.addheaders.append((key, value))
@@ -173,7 +174,7 @@ def retrieve_cacert(hostname, port=443, saved=None, **kwargs):
     """ 取得网站 SSL 验证 cafile 文件. """
     cert_string = ssl.get_server_certificate((hostname, port), **kwargs)
     if not saved: return cert_string
-    with open(saved, 'w', newline='\n'):
+    with open(saved, 'w', newline='\n') as f:
         f.write(cert_string)
 
 
