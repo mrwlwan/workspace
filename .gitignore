@@ -12,3 +12,5 @@ cookies/
 *.jpg
 *.png
 *.bak
+logs/
+temp/
