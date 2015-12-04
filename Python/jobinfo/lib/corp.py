@@ -68,7 +68,7 @@ class Corp(multiprocessing.Process):
     def fetch_corp(self, corp_info=None):
         """ 如果成功抓取, 返回一个Corp Info 的 dict. """
         corp_url = self.get_corp_url(corp_info)
-        content = self.opener.urlopen(corp_url, data=self.corp_post_data, timeout=self.timeout, times=0)
+        content = self.opener.urlopen(corp_url, data=self.corp_post_data, timeout=self.timeout, times=5)
         try:
             for reg in self.corp_regs:
                 search_obj = reg.search(content)

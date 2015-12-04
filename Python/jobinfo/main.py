@@ -1,5 +1,8 @@
 # coding=utf8
 
+import sys
+sys.path.insert(1, '../../../workspace_2014/Python/user_scripts/mylib')
+
 from lib.corp import Commiter, Corp
 from lib.job5156_corp import Job5156Corp
 from lib.jobcn_corp import JobcnCorp
@@ -21,7 +24,7 @@ from lib.zjrc_corp2 import ZJRCCorp as ZJRCCorp2
 from lib.job168_corp2 import Job168Corp as Job168Corp2
 from lib.qzrc_corp import QZRCCorp
 from funcs import shortcut_input
-import sys, multiprocessing, time
+import multiprocessing, time
 
 CORPCLASSES = (
     {'title': 'Job5156', 'class': Job5156Corp},

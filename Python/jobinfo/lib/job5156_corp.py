@@ -7,7 +7,7 @@ class Job5156Corp(Corp):
     def __init__(self):
         config = {
             'info_from': 'job5156',
-            'corplist_url': 'http://dg.job5156.com/s/p/result?locationList={0}&pn={1}&showType=2',
+            'corplist_url': 'http://s.job5156.com/s/p/result?locationList={0}&pn={1}&showType=2',
             'corp_url': 'http://dg.job5156.com/corp/{corp_code}',
             'corplist_post_data': None,
             'corp_post_data': None,
@@ -21,6 +21,7 @@ class Job5156Corp(Corp):
             'commit_each_times': 30,
             'has_cookie': True,
             #'charset': 'gbk',
+            'timeout': 10,
         }
         super().__init__(**config)
 
