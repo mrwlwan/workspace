@@ -1,5 +1,8 @@
 # coding=utf8
 
+# 子类目录
+subjob_path = 'sites'
+
 # 缓存大小
 cache_size = 100
 
