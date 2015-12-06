@@ -30,6 +30,7 @@ class CorpModel(Base):
     # 更新时间.
     insert_date = Column(Date, nullable=False)
 
+
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()

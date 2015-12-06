@@ -2,26 +2,32 @@
 
 import model, config
 import kisrequest
-import datetime, sys, collections, multiprocessing
+import datetime, itertools, sys, collections, multiprocessing, re, urllib.parse
 
 
 class Cache():
     """ 缓存. """
-    def __init__(self, data=None, maxlen=None):
+    def __init__(self, maxlen=None, key=None):
+        self.key = key
         self.data_set = set()
         self.data_deque = collections.deque(maxlen=maxlen)
-        if data:
-            for value in data:
-                self.add(value)
+
+    @property
+    def length(self):
+        return len(self.data_set)
+
+    def _set_value(self, value):
+        return value[self.key] if self.key else value
 
     def exists(self, value):
-        return value in self.data_set
+        return self._set_value(value) in self.data_set
 
     def add(self, value):
+        set_value = self._set_value(value)
         if not self.exists(value):
             if self.data_deque.maxlen and len(self.data_deque) >= self.data_deque.maxlen:
-                self.data_set.remove(self.data_deque.popleft())
-            self.data_set.add(value)
+                self.data_set.remove(self._set_value(self.data_deque.popleft()))
+            self.data_set.add(set_value)
             self.data_deque.append(value)
             return True
         return False
@@ -30,14 +36,18 @@ class Cache():
         self.data_set.clear()
         self.data_deque.clear()
 
+    def get_values(self):
+        return list(self.data_deque)
+
 
 class JobProcess(multiprocessing.Process):
     info_from = ''
     def __init__(self, queue, setting):
         """ 参数 corplist_url 和 corp_url 取胜字符串的高级格式化:format, 使用{0},{1}等通配符; """
+        super().__init__()
         self.queue = queue
         self.session = kisrequest.Session()
-        self.cache = Cache(maxlen=config.cache_size)
+        self.cache = Cache(key='name', maxlen=config.cache_size)
         self.setting = {
             'corplist_url': None,
             'corp_url': None,
@@ -46,10 +56,10 @@ class JobProcess(multiprocessing.Process):
             'corplist_post_data': None,
             'corp_post_data': None,
             'pages': 50,
-            'encoding': 'utf8',
+            'encoding': None, # 通用自动识别
         }
         self.setting.update(setting)
-        self.today = datetime.datet.today()
+        self.today = datetime.date.today()
         #if not self._check_setting(): sys.exit()
 
     def _check_setting(self):
@@ -70,10 +80,10 @@ class JobProcess(multiprocessing.Process):
         return self.session.request(url, *args, **kwargs)
 
     def retrieve_html(self, url, _encoding=None, _errors='strict', **kwargs):
-        return self.urlopen(url, *args, **kwargs).get_text(_encoding or self.encoding, _errors)
+        return self.urlopen(url, **kwargs).get_text(_encoding or self.get_setting('encoding'), _errors)
 
     def retrieve_json(self, url, encoding=None, errors='strict', **kwargs):
-        return self.urlopen(url, *args, **kwargs).get_json(_encoding or self.encoding, _errors)
+        return self.urlopen(url, **kwargs).get_json(_encoding or self.get_setting('encoding'), _errors)
 
     def log(self, msg):
         print('[{0}][{1}]{2}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), self.info_from, msg))
@@ -89,7 +99,7 @@ class JobProcess(multiprocessing.Process):
 
     def get_corplist_urls(self):
         """ 子类大部分须重写. """
-        for page in self.get_setting('pages'):
+        for page in range(1, self.get_setting('pages')+1):
             yield self.get_setting('corplist_url'.format(page))
 
     def get_corp_url(self, corp_info):
@@ -120,59 +130,83 @@ class JobProcess(multiprocessing.Process):
         self.prepare()
         cur_page = itertools.count(1)
         for corplist_url in self.get_corplist_urls():
-            self.log('\n第%s页' % (next(cur_page)))
+            self.log('第%s页' % (next(cur_page)))
+            self.log('*'*40)
             for corp_info in self.fetch_corplist(corplist_url):
-                self.log('*'*60)
-                name = corp_info['name']
-                if not self.cache.add(name):
-                    self.log('{0} 已存在于 {1}'.format(name, self.info_from))
+                if not self.cache.add(corp_info):
+                    self.log('{0} 已存在于 {1}'.format(corp_info['name'], self.info_from))
                     continue
-                if self.corp_regs:
-                    corp_info = self.fetch_corp(corp_info)
+                if self.get_setting('corp_regs'):
+                    corp_info.update(self.fetch_corp(corp_info))
                 self.process_corp_info(corp_info)
                 self.queue.put(corp_info)
+        self.queue.put(None)
         self.log('抓取完毕!')
 
 
 class Commiter(multiprocessing.Process):
     """ 向数据库添加数据项. """
-    def __init__(self, queue):
+    def __init__(self, queue, count):
         super().__init__()
         self.queue = queue
-        self.session = kisrequest.Session()
-        self.db = model.session
-        self._add_times = 0
+        self.count = count
+        #self.cache = Cache(key='name', maxlen=config.commit_each_times) # 候写入数据库的缓存
+        self.cache = Cache(key='name') # 候写入数据库的缓存
 
     def log(self, msg):
-        print('[{0}][Commter]{2}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), msg))
+        print('[{0}][Commiter]{1}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), msg))
 
-    def db_exists(self, name):
+    def cache_exists(self, corp_info):
+        """ 判断是否在候写入数据库的缓存中. """
+        return self.cache.exists(corp_info)
+
+    def db_exists(self, corp_info):
         """ 判断是否已经存在于数据库中. """
-        return self.db.query(model.CorpModel.name.like('%{0}%'.format(name))).one_or_none()
+        return self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp_info['name']))).first()
 
-    def web_exists(self, name):
-        url = config.check_url.format(name)
-        reg = re.compile(config.check_reg_string.format(name), re.S)
-        html = self.session.request(url, data=config.check_post_data).get_text(config.check_encoding)
+    def web_exists(self, corp_info):
+        name = corp_info['name']
+        url = config.check_url.format(urllib.parse.quote(name))
+        reg = re.compile(config.check_reg_string.format(re.escape(name)), re.S)
+        while 1:
+            try:
+                html = self.session.request(url, data=config.check_post_data).get_text(config.check_encoding)
+                if html: break
+            except:
+                print('Http error.')
         return reg.search(html)
 
     def save(self, corp_info):
-        self.db.add(corp_info)
-        self._add_times += 1
-        if self._add_times % self.commit_each_times == 0:
+        self.cache.add(corp_info)
+        if self.cache.length>=config.commit_each_times:
+            self.db.add_all([model.CorpModel(**value) for value in self.cache.get_values()])
             self.db.commit()
+            self.cache.clear()
+            self.log('****提交数据库成功!****')
+
+    def run_init(self):
+        self.session = kisrequest.Session()
+        self.db = model.session
 
     def run(self):
-        while 1:
+        self.run_init()
+        while self.count:
             corp_info = self.queue.get()
-            name = corp_info['name']
-            corp = self.db_exists(name)
+            if not corp_info:
+                self.count -= 1
+                continue
+            if self.cache.exists(corp_info):
+                self.log('{0} 已存在于写入缓存'.format(corp_info['name']))
+                continue
+            corp = self.db_exists(corp_info)
             if corp:
-                self.log('{0} 已存在于 {1}'.format(name, corp.info_from))
+                self.log('{0} 已存在于数据库'.format(corp_info['name']))
                 continue
-            if corp['info_from']!=config.check_info_from and self.web_exists(name):
-                self.log('{0} 已存在于 {1}'.format(name, corp_info['info_from']))
-                continue
+            if corp_info['info_from']!=config.check_info_from and self.web_exists(corp_info):
+                self.log('{0} 已存在于 {1}'.format(corp_info['name'], config.check_info_from))
+                corp_info['info_from'] = config.check_info_from
+            self.log('{0} 保存成功'.format(corp_info['name']))
             self.save(corp_info)
-            self.log('{0} 保存成功'.format(name))
+        self.db.commit()
+        self.log('提交数据库成功!')
 

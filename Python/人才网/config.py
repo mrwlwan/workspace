@@ -19,7 +19,7 @@ check_reg_string = r'<a class="comName" title=\'{0}\''
 
 check_info_from = '智通人才网'
 
-check_encoding = 'gbk'
+check_encoding = 'utf8'
 
 check_post_data = None
 
