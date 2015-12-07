@@ -152,6 +152,25 @@ class Commiter(multiprocessing.Process):
         self.count = count
         #self.cache = Cache(key='name', maxlen=config.commit_each_times) # 候写入数据库的缓存
         self.cache = Cache(key='name') # 候写入数据库的缓存
+        self.web_check_input_queue = multiprocessing.Queue()
+        self.web_check_output_queue = multiprocessing.Queue()
+        self.web_check_processes = []
+
+    def run_init(self):
+        self.session = kisrequest.Session()
+        self.db = model.session
+
+    def start_web_check(self):
+        for i in range(config.check_web_exists_process):
+            process = WebCheckProcess(self.web_check_input_queue, self.web_check_output_queue)
+            self.web_check_processes.append(process)
+            process.start()
+        self.log('开始 WebCheckProcess')
+
+    def stop_web_check(self):
+        for process in self.web_check_processes:
+            process.terminate()
+        self.log('结束 WebCheckProcess')
 
     def log(self, msg):
         print('[{0}][Commiter]{1}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), msg))
@@ -184,12 +203,9 @@ class Commiter(multiprocessing.Process):
             self.cache.clear()
             self.log('****提交数据库成功!****')
 
-    def run_init(self):
-        self.session = kisrequest.Session()
-        self.db = model.session
-
     def run(self):
         self.run_init()
+        self.start_web_check()
         while self.count:
             corp_info = self.queue.get()
             if not corp_info:
@@ -202,11 +218,50 @@ class Commiter(multiprocessing.Process):
             if corp:
                 self.log('{0} 已存在于数据库'.format(corp_info['name']))
                 continue
-            if corp_info['info_from']!=config.check_info_from and self.web_exists(corp_info):
-                self.log('{0} 已存在于 {1}'.format(corp_info['name'], config.check_info_from))
-                corp_info['info_from'] = config.check_info_from
+            if corp_info['info_from']!=config.check_info_from:
+                self.web_check_input_queue.put(corp_info)
+                corp_info, is_exists = self.web_check_output_queue.get()
+                if is_exists:
+                    self.log('{0} 已存在于 {1}'.format(corp_info['name'], config.check_info_from))
+                    corp_info['info_from'] = config.check_info_from
             self.log('{0} 保存成功'.format(corp_info['name']))
             self.save(corp_info)
         self.save(None, commit=True)
-        self.log('提交数据库成功!')
+        self.stop_web_check()
+        self.log('线束 Commiter!')
+
+
+class WebCheckProcess(multiprocessing.Process):
+    """ 网站上检查存在性. """
+    def __init__(self, input_queue, output_queue):
+        super().__init__()
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+
+    def run_init(self):
+        self.session = kisrequest.Session()
+
+    def exists(self, corp_info):
+        name = corp_info['name']
+        url = config.check_url.format(urllib.parse.quote(name))
+        reg = re.compile(config.check_reg_string.format(re.escape(name)), re.S)
+        while 1:
+            try:
+                html = self.session.request(url, data=config.check_post_data).get_text(config.check_encoding)
+                if html: break
+            except:
+                print('Http error. Target: {0}'.format(name))
+        return bool(reg.search(html))
+
+    def run(self):
+        self.run_init()
+        while 1:
+            corp_info = self.input_queue.get()
+            if not corp_info:
+                print('结束 WebCheckProcess!')
+                break
+            self.output_queue.put((corp_info, self.exists(corp_info)))
+
+
+
 

@@ -23,3 +23,5 @@ check_encoding = 'utf8'
 
 check_post_data = None
 
+check_web_exists_process = 5
+

@@ -1,6 +1,8 @@
 # coding=utf8
 
-import joblib, model2
+#import joblib
+import joblib1 as joblib
+import model2
 import datetime, multiprocessing, time
 
 class MergeProcess(multiprocessing.Process):
@@ -36,7 +38,7 @@ class MergeProcess(multiprocessing.Process):
         return True
 
     def run(self):
-        for corp in model2.session.query(model2.CorpModel).offset(32910):
+        for corp in model2.session.query(model2.CorpModel).offset(81650):
             corp_info = {}
             for key, s_key in self.key_map.items():
                 corp_info[key] = getattr(corp, s_key)
