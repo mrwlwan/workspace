@@ -1,8 +1,12 @@
 # coding=utf8
 
 import model, config
-import kisrequest
+import kisfunc, kisrequest
 import datetime, itertools, sys, collections, multiprocessing, re, urllib.parse
+
+def _log(sender, msg):
+    #print('[{0}][{1}]{2}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), sender, msg)
+    kisfunc.time_print('[{0}]{1}'.format(sender, msg))
 
 
 class Cache():
@@ -86,7 +90,7 @@ class JobProcess(multiprocessing.Process):
         return self.urlopen(url, **kwargs).get_json(_encoding or self.get_setting('encoding'), _errors)
 
     def log(self, msg):
-        print('[{0}][{1}]{2}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), self.info_from, msg))
+        _log(self.info_from, msg)
 
     def process_corp_info(self, corp_info):
         """ 写入数据库前数据处理. """
@@ -150,21 +154,122 @@ class Commiter(multiprocessing.Process):
         super().__init__()
         self.queue = queue
         self.count = count
-        #self.cache = Cache(key='name', maxlen=config.commit_each_times) # 候写入数据库的缓存
-        self.cache = Cache(key='name') # 候写入数据库的缓存
+        self.db_lock = multiprocessing.Lock()
+        self.sub_input_queue = multiprocessing.Queue()
+        self.sub_output_queue = multiprocessing.Queue()
+        self.web_check_processes = []
+        self.write_process = None
+
+    def run_init(self):
+        self.session = kisrequest.Session()
+        self.db = model.session
+
+    def start_sub_processes(self):
+        for i in range(1, config.check_web_exists_process+1):
+            process = WebCheckProcess(self.sub_input_queue, self.sub_output_queue, name='WebCheck-{0}'.format(i))
+            self.web_check_processes.append(process)
+            process.start()
+        self.log('开始 WebCheckProcess')
+        self.write_process = WriteProcess(self.sub_output_queue, self.db_lock)
+        self.write_process.start()
+        self.log('开始 WriteProcess')
+
+    def stop_sub_processes(self):
+        self.log('正在结束 WebCheckProcess...')
+        for process in self.web_check_processes:
+            self.sub_input_queue.put(None)
+        for process in self.web_check_processes:
+            process.join()
+        self.log('正在结束 WriteProcess...')
+        self.sub_output_queue.put(None)
+        self.write_process.join()
 
     def log(self, msg):
-        print('[{0}][Commiter]{1}'.format(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), msg))
-
-    def cache_exists(self, corp_info):
-        """ 判断是否在候写入数据库的缓存中. """
-        return self.cache.exists(corp_info)
+        _log('Commiter', msg)
 
     def db_exists(self, corp_info):
         """ 判断是否已经存在于数据库中. """
-        return self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp_info['name']))).first()
+        self.db_lock.acquire()
+        result = self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp_info['name']))).first()
+        self.db_lock.release()
+        return result
 
-    def web_exists(self, corp_info):
+    def run(self):
+        self.run_init()
+        self.start_sub_processes()
+        while self.count:
+            corp_info = self.queue.get()
+            if not corp_info:
+                self.count -= 1
+                continue
+            if self.db_exists(corp_info):
+                self.log('{0} 已存在于数据库'.format(corp_info['name']))
+                continue
+            if corp_info['info_from']!=config.check_info_from:
+                self.sub_input_queue.put(corp_info)
+                continue
+            self.sub_output_queue.put(corp_info)
+        self.stop_sub_processes()
+        self.log('结束 Commiter!')
+
+
+class WriteProcess(multiprocessing.Process):
+    """ 写入数据库进程. """
+    def __init__(self, queue, db_lock):
+        super().__init__()
+        self.queue = queue
+        self.db_lock = db_lock
+        self.cache = dict()
+
+    def run_init(self):
+        self.db = model.session
+
+    def log(self, msg):
+        _log('Writer', msg)
+
+    def _save(self):
+        if not self.cache: return
+        self.db_lock.acquire()
+        self.db.add_all([model.CorpModel(**value) for value in self.cache.values()])
+        self.db.commit()
+        self.cache.clear()
+        self.db_lock.release()
+        self.log('****提交数据库成功!****')
+
+    def save(self, corp_info):
+        name = corp_info['name']
+        if name in self.cache:
+            self.log('{0} 已存在于写入缓存'.format(name))
+            return
+        self.cache[name] = corp_info
+        self.log('{0} 保存成功'.format(name))
+        if len(self.cache)>=config.commit_each_times: self._save()
+
+    def run(self):
+        self.run_init()
+        while 1:
+            corp_info = self.queue.get()
+            if not corp_info:
+                self._save()
+                self.log('结束 WriteProcess!')
+                break
+            self.save(corp_info)
+
+
+class WebCheckProcess(multiprocessing.Process):
+    """ 网站上检查存在性. """
+    def __init__(self, input_queue, output_queue, name=None):
+        super().__init__(name=name)
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+
+    def run_init(self):
+        self.session = kisrequest.Session()
+
+    def log(self, msg):
+        _log(self.name, msg)
+
+    def exists(self, corp_info):
         name = corp_info['name']
         url = config.check_url.format(urllib.parse.quote(name))
         reg = re.compile(config.check_reg_string.format(re.escape(name)), re.S)
@@ -173,40 +278,18 @@ class Commiter(multiprocessing.Process):
                 html = self.session.request(url, data=config.check_post_data).get_text(config.check_encoding)
                 if html: break
             except:
-                print('Http error.')
+                self.log('Http error. Target: {0}'.format(name))
         return reg.search(html)
-
-    def save(self, corp_info, commit=False):
-        if corp_info: self.cache.add(corp_info)
-        if commit or self.cache.length>=config.commit_each_times:
-            self.db.add_all([model.CorpModel(**value) for value in self.cache.get_values()])
-            self.db.commit()
-            self.cache.clear()
-            self.log('****提交数据库成功!****')
-
-    def run_init(self):
-        self.session = kisrequest.Session()
-        self.db = model.session
 
     def run(self):
         self.run_init()
-        while self.count:
-            corp_info = self.queue.get()
+        while 1:
+            corp_info = self.input_queue.get()
             if not corp_info:
-                self.count -= 1
-                continue
-            if self.cache.exists(corp_info):
-                self.log('{0} 已存在于写入缓存'.format(corp_info['name']))
-                continue
-            corp = self.db_exists(corp_info)
-            if corp:
-                self.log('{0} 已存在于数据库'.format(corp_info['name']))
-                continue
-            if corp_info['info_from']!=config.check_info_from and self.web_exists(corp_info):
+                self.log('结束一个 WebCheckProcess!')
+                break
+            if self.exists(corp_info):
                 self.log('{0} 已存在于 {1}'.format(corp_info['name'], config.check_info_from))
                 corp_info['info_from'] = config.check_info_from
-            self.log('{0} 保存成功'.format(corp_info['name']))
-            self.save(corp_info)
-        self.save(None, commit=True)
-        self.log('提交数据库成功!')
+            self.output_queue.put(corp_info)
 

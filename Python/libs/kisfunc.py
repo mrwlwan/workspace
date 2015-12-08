@@ -1,6 +1,6 @@
 # coding=utf8
 
-import functools
+import functools, datetime
 
 
 def coroutine(func):
@@ -20,3 +20,8 @@ def until_success(func):
                 return func(*args, **kwargs)
             except: pass
     return newfunc
+
+def time_print(*args, **kwargs):
+    """ 显示当前时间的 print. """
+    print(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), end='')
+    print(*args, **kwargs)
