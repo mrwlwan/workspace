@@ -2,7 +2,8 @@
 
 #import joblib
 import joblib
-import model, model2
+import model
+import model3 as model2
 import datetime, multiprocessing, time, itertools
 
 class MergeProcess(multiprocessing.Process):
@@ -50,13 +51,14 @@ class MergeProcess(multiprocessing.Process):
         return result
 
     def run(self):
-        offset = self.get_offset()
-        #offset = 184707
+        #offset = self.get_offset()
+        offset = 10
         print(offset)
         for corp in model2.session.query(model2.CorpModel).offset(offset-10):
             corp_info = {}
             for key, s_key in self.key_map.items():
-                corp_info[key] = getattr(corp, s_key)
+                #corp_info[key] = getattr(corp, s_key)
+                corp_info[key] = getattr(corp, key)
             if not self.check_corp_info(corp_info):
                 print('{0} 失效!'.format(corp_info['name']))
                 continue

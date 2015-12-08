@@ -190,7 +190,8 @@ class Commiter(multiprocessing.Process):
     def db_exists(self, corp_info):
         """ 判断是否已经存在于数据库中. """
         self.db_lock.acquire()
-        result = self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp_info['name']))).first()
+        #result = self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp_info['name']))).first()
+        result = self.db.query(model.CorpModel).filter_by(name=corp_info['name']).first()
         self.db_lock.release()
         return result
 
@@ -236,10 +237,20 @@ class WriteProcess(multiprocessing.Process):
         self.db_lock.release()
         self.log('****提交数据库成功!****')
 
+    def db_exists(self, corp_info):
+        """ 再次检查以防. 判断是否已经存在于数据库中. """
+        self.db_lock.acquire()
+        result = self.db.query(model.CorpModel).filter_by(name=corp_info['name']).first()
+        self.db_lock.release()
+        return result
+
     def save(self, corp_info):
         name = corp_info['name']
         if name in self.cache:
             self.log('{0} 已存在于写入缓存'.format(name))
+            return
+        if self.exists(corp_info):
+            self.log('{0} 已存在于数据库'.format(name))
             return
         self.cache[name] = corp_info
         self.log('{0} 保存成功'.format(name))

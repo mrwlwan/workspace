@@ -12,7 +12,7 @@ class CorpModel(Base):
 
     id  = Column(Integer, primary_key=True)
     # 企业名称.
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True, index=True)
     # 企业代码.
     code = Column(String, nullable=True)
     # 地址.

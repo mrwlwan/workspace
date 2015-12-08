@@ -23,5 +23,5 @@ def until_success(func):
 
 def time_print(*args, **kwargs):
     """ 显示当前时间的 print. """
-    print(datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S'), end='')
+    print(datetime.datetime.strftime(datetime.datetime.now(), '[%H:%M:%S]'), end='')
     print(*args, **kwargs)
