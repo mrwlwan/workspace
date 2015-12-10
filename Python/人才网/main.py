@@ -5,7 +5,7 @@ import os, imp, sys, multiprocessing, itertools, re, datetime, csv
 
 class Application:
     def __init__(self):
-        self.suport_actions = [('抓取数据', 'fetch', True), ('生成报告', 'report', False)] # 第三项表示是否有下级选择
+        self.suport_actions = [('抓取数据', 'fetch', True), ('生成报告', 'report', True)] # 第三项表示是否有下级选择
         self.subjob_modules = self.load_subjob_modules()
         self.today = datetime.date.today()
 
@@ -22,22 +22,24 @@ class Application:
         while 1:
             action_index = itertools.count(1)
             print('*'*60)
-            print('\n0. 退出')
+            print('0. 退出')
             print('\n'.join(['{0}. {1}'.format(next(action_index), action[0]) for action in self.suport_actions]))
             select_index = int(input('请选择操作: ').strip())-1
+            print('\n')
             if select_index<0: sys.exit()
             action = self.suport_actions[select_index]
             action_method = getattr(self, action[1]+'_action')
-            if not action[2]:
-                action_method()
-                continue
             module_index = itertools.count(1)
-            print('\n0. 返回')
+            print('0. 返回')
             print('\n'.join(['{0}. {1}'.format(next(module_index), module.SubJobProcess.info_from) for module in self.subjob_modules]))
-            select_indexes = input('请选择操作: ').strip()
+            select_indexes = input('请选择操作(默认非{0}): '.format(config.check_info_from)).strip()
+            print('\n')
             if select_indexes=='0': continue
-            select_indexes = [int(index)-1 for index in re.split(r'\s+', select_indexes)]
-            modules = list(map(self.subjob_modules.__getitem__, select_indexes))
+            if select_indexes:
+                select_indexes = [int(index)-1 for index in re.split(r'\s+', select_indexes)]
+                modules = list(map(self.subjob_modules.__getitem__, select_indexes))
+            else:
+                modules = None
             action_method(modules)
 
     def fetch_action(self, modules):
@@ -54,9 +56,18 @@ class Application:
         commiter.join()
 
     def report_action(self, modules=None):
-        #query = model.session.query(model.CorpModel).filter(model.CorpModel.info_from!=config.check_info_from, model.CorpModel.insert_date==self.today)
-        query = model.session.query(model.CorpModel).filter(model.CorpModel.insert_date==self.today)
+        report_filename_parts = []
+        args = [model.CorpModel.insert_date==self.today]
+        if modules:
+            for module in modules:
+                report_filename_parts.append(module.SubJobProcess.info_from)
+                args.append(model.CorpModel.info_from==module.SubJobProcess.info_from)
+        else:
+            args.append(model.CorpModel.info_from!=config.check_info_from)
+        query = model.session.query(model.CorpModel).filter(*args)
         if not query.count(): return print('当天没有抓取数据.')
+        report_filename_parts.append(config.report_filename)
+        report_filename = '_'.join(report_filename_parts)
         queue = multiprocessing.Queue()
         subjobs_classes = dict([(module.SubJobProcess.info_from, module.SubJobProcess) for module in self.subjob_modules])
         subjobs = {}
@@ -65,7 +76,7 @@ class Application:
         for field in config.report_fields:
             title_row.append(field[0])
             keys.append(field[1])
-        with open(config.report_filename, 'w', encoding=config.report_encoding) as f:
+        with open(report_filename, 'w', encoding=config.report_encoding) as f:
             csv_writer = csv.writer(f, delimiter=',', lineterminator='\n')
             csv_writer.writerow(title_row)
             for corp in query:

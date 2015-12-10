@@ -81,7 +81,7 @@ class JobProcess(multiprocessing.Process):
     def retrieve_html(self, url, _encoding=None, _errors='strict', **kwargs):
         return self.urlopen(url, **kwargs).get_text(_encoding or self.get_setting('encoding'), _errors)
 
-    def retrieve_json(self, url, encoding=None, errors='strict', **kwargs):
+    def retrieve_json(self, url, _encoding=None, _errors='strict', **kwargs):
         return self.urlopen(url, **kwargs).get_json(_encoding or self.get_setting('encoding'), _errors)
 
     def log(self, msg):
@@ -138,7 +138,7 @@ class JobProcess(multiprocessing.Process):
                 corp = model.CorpModel()
                 corp.from_dict(self.process_corp_info(corp_info))
                 if not self.cache.add(corp):
-                    self.log('{0} 已存在于抓取缓存中'.format(corp.name))
+                    self.log('{0} 已存在于抓取缓存'.format(corp.name))
                     continue
                 if self.get_setting('corp_regs'):
                     corp.from_dict(self.process_corp_info(self.fetch_corp_info(corp)))
