@@ -1,7 +1,7 @@
 # coding=utf8
 
-import config, joblib, model
-import os, imp, sys, multiprocessing, itertools, re, datetime, csv
+import config, joblib, model, kisrequest
+import os, imp, sys, multiprocessing, itertools, re, datetime, csv, urllib.parse
 
 class Application:
     def __init__(self):
@@ -17,6 +17,14 @@ class Application:
             module_name = 'sites.' + os.path.splitext(filename)[0]
             subjob_modules.append(imp.load_source(module_name, filepath))
         return subjob_modules
+
+    def check_valid(self):
+        """ 检查config中check的属性是否有效. """
+        keyword = '广东智通人才连锁股份有限公司'
+        url = config.check_url.format(urllib.parse.quote(keyword))
+        reg = re.compile(config.check_reg_string.format(re.escape(keyword)), re.S)
+        html = kisrequest.urlopen(url, data=config.check_post_data).get_text(config.check_encoding)
+        return reg.search(html)
 
     def input(self):
         while 1:
@@ -94,4 +102,7 @@ class Application:
 
 if __name__=='__main__':
     app = Application()
+    if not app.check_valid():
+        print('检查参数已经失效, 请重新设置!')
+        sys.exit()
     app.input()
