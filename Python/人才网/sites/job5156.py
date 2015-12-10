@@ -9,14 +9,14 @@ class SubJobProcess(joblib.JobProcess):
     def __init__(self, queue):
         setting = {
             'corplist_url': 'http://s.job5156.com/s/p/result?locationList={0}&pn={1}&showType=2',
-            'corp_url': 'http://dg.job5156.com/corp/{code}',
+            'corp_url': 'http://dg.job5156.com/corp/{0.code}',
             'corplist_reg': re.compile(r'<td class="com"><a class="comName" title=\'(?P<name>[^\']+)\' href="http://[^/]+/corp/(?P<code>[^"]+)', re.S),
             'corp_regs': [
                 re.compile('联系地址：</span><label>(?P<address>[^<]+)', re.S),
                 re.compile('联系人：</span>(?P<contact_person>[^<]+)', re.S),
                 #re.compile('电话：</span>(?P<contact_phone>[^<]+)', re.S),
             ],
-            'pages': 50,
+            'pages': 20,
             #'encoding': 'gbk',
             'job_locations': [
                 {'city': '东莞', 'code':'1401'},

@@ -9,9 +9,9 @@ def _log(sender, msg):
     kisfunc.time_print('[{0}]{1}'.format(sender, msg))
 
 
-class Cache():
-    """ 缓存. """
-    def __init__(self, maxlen=None, key=None):
+class CorpCache():
+    """ CorpModel 对象缓存. """
+    def __init__(self, maxlen=None, key='name'):
         self.key = key
         self.data_set = set()
         self.data_deque = collections.deque(maxlen=maxlen)
@@ -20,19 +20,19 @@ class Cache():
     def length(self):
         return len(self.data_set)
 
-    def _set_value(self, value):
-        return value[self.key] if self.key else value
+    def _to_set_value(self, corp):
+        return getattr(corp, self.key)
 
-    def exists(self, value):
-        return self._set_value(value) in self.data_set
+    def exists(self, corp):
+        return self._to_set_value(corp) in self.data_set
 
-    def add(self, value):
-        set_value = self._set_value(value)
-        if not self.exists(value):
+    def add(self, corp):
+        set_value = self._to_set_value(corp)
+        if not self.exists(corp):
             if self.data_deque.maxlen and len(self.data_deque) >= self.data_deque.maxlen:
-                self.data_set.remove(self._set_value(self.data_deque.popleft()))
+                self.data_set.remove(self._to_set_value(self.data_deque.popleft()))
             self.data_set.add(set_value)
-            self.data_deque.append(value)
+            self.data_deque.append(corp)
             return True
         return False
 
@@ -40,7 +40,7 @@ class Cache():
         self.data_set.clear()
         self.data_deque.clear()
 
-    def get_values(self):
+    def get_corps(self):
         return list(self.data_deque)
 
 
@@ -51,7 +51,7 @@ class JobProcess(multiprocessing.Process):
         super().__init__()
         self.queue = queue
         self.session = kisrequest.Session()
-        self.cache = Cache(key='name', maxlen=config.cache_size)
+        self.cache = CorpCache(key='name', maxlen=config.cache_size)
         self.setting = {
             'corplist_url': None,
             'corp_url': None,
@@ -64,24 +64,19 @@ class JobProcess(multiprocessing.Process):
         }
         self.setting.update(setting)
         self.today = datetime.date.today()
-        #if not self._check_setting(): sys.exit()
-
-    def _check_setting(self):
-        """ 检查是否缺少必要的参数. """
-        miss = []
-        for key in ['corplist_url', 'corp_url', 'corplist_reg', 'corp_regs']:
-            if not self.setting.get(key): miss.appen(key)
-        if miss:
-            self.log('缺少参数: '+', '.join(miss))
-            return False
-        return True
 
     def get_setting(self, key, default=None):
         return self.setting.get(key, default)
 
-    def urlopen(self, url, *args, **kwargs):
+    def urlopen(self, url, **kwargs):
         """ 通用网页请求. """
-        return self.session.request(url, *args, **kwargs)
+        while 1:
+            try:
+                response = self.session.request(url, timeout=config.timeout, **kwargs)
+                if not response: continue
+                return response
+            except:
+                self.log('Http error, try again...')
 
     def retrieve_html(self, url, _encoding=None, _errors='strict', **kwargs):
         return self.urlopen(url, **kwargs).get_text(_encoding or self.get_setting('encoding'), _errors)
@@ -93,22 +88,25 @@ class JobProcess(multiprocessing.Process):
         _log(self.info_from, msg)
 
     def process_corp_info(self, corp_info):
-        """ 写入数据库前数据处理. """
+        """ 对抓取到的corp_info字典作常规处理. """
         for key, values in corp_info.items():
             corp_info[key] = values.strip()
-        if 'insert_date' not in corp_info:
-            corp_info['insert_date'] = self.today
-        corp_info['info_from'] = self.info_from
         return corp_info
+
+    def before_save(self, corp):
+        """ 将corp put in queue 前处理."""
+        if not corp.insert_date: corp.insert_date = self.today
+        corp.info_from = self.info_from
+        return corp
 
     def get_corplist_urls(self):
         """ 子类大部分须重写. """
         for page in range(1, self.get_setting('pages')+1):
             yield self.get_setting('corplist_url'.format(page))
 
-    def get_corp_url(self, corp_info):
+    def get_corp_url(self, corp):
         """ 返回公司详情页链接. """
-        return self.get_setting('corp_url').format(**corp_info)
+        return self.get_setting('corp_url').format(corp)
 
     def prepare(self, *args, **kwargs):
         pass
@@ -118,8 +116,8 @@ class JobProcess(multiprocessing.Process):
         for match in self.get_setting('corplist_reg').finditer(html):
             yield match.groupdict()
 
-    def fetch_corp(self, corp_info):
-        url = self.get_corp_url(corp_info)
+    def fetch_corp_info(self, corp):
+        url = self.get_corp_url(corp)
         html = self.retrieve_html(url, data=self.get_setting('corp_post_data'))
         result = {}
         try:
@@ -137,13 +135,14 @@ class JobProcess(multiprocessing.Process):
             self.log('第%s页' % (next(cur_page)))
             self.log('*'*40)
             for corp_info in self.fetch_corplist(corplist_url):
-                if not self.cache.add(corp_info):
-                    self.log('{0} 已存在于 {1}'.format(corp_info['name'], self.info_from))
+                corp = model.CorpModel()
+                corp.from_dict(self.process_corp_info(corp_info))
+                if not self.cache.add(corp):
+                    self.log('{0} 已存在于抓取缓存中'.format(corp.name))
                     continue
                 if self.get_setting('corp_regs'):
-                    corp_info.update(self.fetch_corp(corp_info))
-                self.process_corp_info(corp_info)
-                self.queue.put(corp_info)
+                    corp.from_dict(self.process_corp_info(self.fetch_corp_info(corp)))
+                self.queue.put(self.before_save(corp))
         self.queue.put(None)
         self.log('抓取完毕!')
 
@@ -187,11 +186,11 @@ class Commiter(multiprocessing.Process):
     def log(self, msg):
         _log('Commiter', msg)
 
-    def db_exists(self, corp_info):
+    def db_exists(self, corp):
         """ 判断是否已经存在于数据库中. """
         self.db_lock.acquire()
-        #result = self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp_info['name']))).first()
-        result = self.db.query(model.CorpModel).filter_by(name=corp_info['name']).first()
+        #result = self.db.query(model.CorpModel).filter(model.CorpModel.name.like('%{0}%'.format(corp.name))).first()
+        result = self.db.query(model.CorpModel).filter_by(name=corp.name).first()
         self.db_lock.release()
         return result
 
@@ -199,17 +198,17 @@ class Commiter(multiprocessing.Process):
         self.run_init()
         self.start_sub_processes()
         while self.count:
-            corp_info = self.queue.get()
-            if not corp_info:
+            corp = self.queue.get()
+            if not corp:
                 self.count -= 1
                 continue
-            if self.db_exists(corp_info):
-                self.log('{0} 已存在于数据库'.format(corp_info['name']))
+            if self.db_exists(corp):
+                self.log('{0} 已存在于数据库'.format(corp.name))
                 continue
-            if corp_info['info_from']!=config.check_info_from:
-                self.sub_input_queue.put(corp_info)
+            if corp.info_from!=config.check_info_from:
+                self.sub_input_queue.put(corp)
                 continue
-            self.sub_output_queue.put(corp_info)
+            self.sub_output_queue.put(corp)
         self.stop_sub_processes()
         self.log('结束 Commiter!')
 
@@ -231,40 +230,40 @@ class WriteProcess(multiprocessing.Process):
     def _save(self):
         if not self.cache: return
         self.db_lock.acquire()
-        self.db.add_all([model.CorpModel(**value) for value in self.cache.values()])
+        self.db.add_all(list(self.cache.values()))
         self.db.commit()
         self.cache.clear()
         self.db_lock.release()
         self.log('****提交数据库成功!****')
 
-    def db_exists(self, corp_info):
+    def db_exists(self, corp):
         """ 再次检查以防. 判断是否已经存在于数据库中. """
         self.db_lock.acquire()
-        result = self.db.query(model.CorpModel).filter_by(name=corp_info['name']).first()
+        result = self.db.query(model.CorpModel).filter_by(name=corp.name).first()
         self.db_lock.release()
         return result
 
-    def save(self, corp_info):
-        name = corp_info['name']
+    def save(self, corp):
+        name = corp.name
         if name in self.cache:
             self.log('{0} 已存在于写入缓存'.format(name))
             return
-        if self.exists(corp_info):
+        if self.db_exists(corp):
             self.log('{0} 已存在于数据库'.format(name))
             return
-        self.cache[name] = corp_info
+        self.cache[name] = corp
         self.log('{0} 保存成功'.format(name))
         if len(self.cache)>=config.commit_each_times: self._save()
 
     def run(self):
         self.run_init()
         while 1:
-            corp_info = self.queue.get()
-            if not corp_info:
+            corp = self.queue.get()
+            if not corp:
                 self._save()
                 self.log('结束 WriteProcess!')
                 break
-            self.save(corp_info)
+            self.save(corp)
 
 
 class WebCheckProcess(multiprocessing.Process):
@@ -280,8 +279,8 @@ class WebCheckProcess(multiprocessing.Process):
     def log(self, msg):
         _log(self.name, msg)
 
-    def exists(self, corp_info):
-        name = corp_info['name']
+    def exists(self, corp):
+        name = corp.name
         url = config.check_url.format(urllib.parse.quote(name))
         reg = re.compile(config.check_reg_string.format(re.escape(name)), re.S)
         while 1:
@@ -295,12 +294,12 @@ class WebCheckProcess(multiprocessing.Process):
     def run(self):
         self.run_init()
         while 1:
-            corp_info = self.input_queue.get()
-            if not corp_info:
+            corp = self.input_queue.get()
+            if not corp:
                 self.log('结束一个 WebCheckProcess!')
                 break
-            if self.exists(corp_info):
-                self.log('{0} 已存在于 {1}'.format(corp_info['name'], config.check_info_from))
-                corp_info['info_from'] = config.check_info_from
-            self.output_queue.put(corp_info)
+            if self.exists(corp):
+                self.log('{0} 已存在于 {1}'.format(corp.name, config.check_info_from))
+                corp.info_from = config.check_info_from
+            self.output_queue.put(corp)
 
