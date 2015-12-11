@@ -1,7 +1,7 @@
 # coding=utf8
 
 import http.cookiejar
-import urllib.request, urllib.parse, re, json, os, gzip, ssl
+import urllib.request, urllib.parse, re, json, os, gzip, ssl, sqlite3
 
 class Session:
     def __init__(self, headers=None, handlers=None):
@@ -47,7 +47,7 @@ class Session:
     def context(self, context):
         self._https_handler._context = context
 
-    def load_filecookiejar(self, filename, style='lwp', **kwargs):
+    def set_filecookiejar(self, filename, style='lwp', **kwargs):
         """ 加载文件型cookiejar.
         @filename(str/None).
         @style(str): lwp/moz.
@@ -62,6 +62,39 @@ class Session:
         if filename and os.path.exists(filename): self.cookiejar.load()
         return True
 
+    def load_cookies_sqlite(self, filename, style='moz', where=None, default_cookie=None, **kwargs):
+        """ 加载 cookies.sqlte.
+        @filename(str): sqlite 数据库文件.
+        @where(str): sqlite 的条件语句. 过滤之用.
+        @style(str): moz. 暂时支持 mozilla 的 cookies.sqlite 数据库文件.
+        @kwargs: 传递给sqlite3.connect.
+        """
+        style = style.lower()
+        if style=='moz':
+            conn = sqlite3.connect(filename, **kwargs)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            sql = 'select name, value, host as domain, path, expiry as expires, isSecure as secure from moz_cookies{0}'.format(' where '+where if where else '')
+            cursor.execute(sql)
+            for row in cursor.fetchall():
+                default = default_cookie.copy() if default_cookie else {
+                    'version': 0,
+                    'port': None,
+                    'port_specified': False,
+                    'domain_specified': True,
+                    'domain_initial_dot': True,
+                    'path_specified': False,
+                    'discard': False,
+                    'comment': None,
+                    'comment_url': None,
+                    'rest': {},
+                    'rfc2109': False,
+                }
+                default.update(row)
+                default['domain_initial_dot'] = row['domain'].startswith('.')
+                default['secure'] = bool(row['secure'])
+                self.cookiejar.set_cookie(http.cookiejar.Cookie(**default))
+
     def set_default_context(self, cafile=None, capath=None, cadata=None, **kwargs):
         if not (cafile or capath or cadata):
             cafile = os.path.join(os.path.dirname(__file__), 'cacert.pem')
@@ -72,6 +105,10 @@ class Session:
 
     def load_context(self, cafile=None, capath=None, cadata=None, **kwargs):
         self.context.load_verify_locations(cafile=cafile, capath=capath, cadata=cadata, **kwargs)
+
+    def remove_context(self):
+        """ 删除 context. """
+        self.context = None
 
     def add_header(self, key, value):
         self.opener.addheaders.append((key, value))
