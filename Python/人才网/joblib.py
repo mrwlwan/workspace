@@ -9,39 +9,37 @@ def _log(sender, msg):
     kisfunc.time_print('[{0}]{1}'.format(sender, msg))
 
 
-class CorpCache():
+class CorpCache:
     """ CorpModel 对象缓存. """
     def __init__(self, maxlen=None, key='name'):
+        self.data = collections.OrderedDict()
+        self.maxlen = maxlen
         self.key = key
-        self.data_set = set()
-        self.data_deque = collections.deque(maxlen=maxlen)
 
     @property
     def length(self):
-        return len(self.data_set)
+        return len(self.data)
 
-    def _to_set_value(self, corp):
+    def _to_key(self, corp):
         return getattr(corp, self.key)
 
     def exists(self, corp):
-        return self._to_set_value(corp) in self.data_set
+        return self._to_key(corp) in self.data
 
     def add(self, corp):
-        set_value = self._to_set_value(corp)
+        key = self._to_key(corp)
         if not self.exists(corp):
-            if self.data_deque.maxlen and len(self.data_deque) >= self.data_deque.maxlen:
-                self.data_set.remove(self._to_set_value(self.data_deque.popleft()))
-            self.data_set.add(set_value)
-            self.data_deque.append(corp)
+            if self.maxlen is not None and self.length >= self.maxlen:
+                self.data.popitem(last=False)
+            self.data[key] = corp
             return True
         return False
 
     def clear(self):
-        self.data_set.clear()
-        self.data_deque.clear()
+        self.data.clear()
 
     def get_corps(self):
-        return list(self.data_deque)
+        return list(self.data.values())
 
 
 class JobProcess(multiprocessing.Process):
